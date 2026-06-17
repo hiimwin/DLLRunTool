@@ -1,6 +1,6 @@
 {
   "version": "1.1.0",
   "releasedAt": "2026-06-17",
-  "downloadUrl": "https://REPLACE_WITH_LINK_TO_ZIP",
-  "releaseNotes": "Khóa service, nút Starting khi Run, global config ConnectionStrings, self-contained build."
+  "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1.1.0/Win_Trung-MicroservicesControlPanel.zip",
+  "releaseNotes": "Bản đầu tiên trên GitHub Releases"
 }
