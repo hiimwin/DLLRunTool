@@ -1,0 +1,114 @@
+[
+  {
+    "Id": "loyalty-redis",
+    "Name": "Redis",
+    "Type": "BE",
+    "FolderPath": "{{redisPath}}",
+    "DllName": "redis-server.exe",
+    "Url": "",
+    "IsExe": true
+  },
+  {
+    "Id": "loyalty-authserver",
+    "Name": "AuthServer",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\apps\\auth-server\\src\\AKC.Products.AuthServer\\bin\\Debug\\net6.0",
+    "DllName": "AKC.Products.AuthServer.dll",
+    "Url": "https://localhost:44322",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-identity",
+    "Name": "Identity",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\identity\\src\\AKC.Products.IdentityService.HttpApi.Host\\bin\\Debug\\net6.0",
+    "DllName": "AKC.Products.IdentityService.HttpApi.Host.dll",
+    "Url": "https://localhost:44388",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-saas",
+    "Name": "Saas",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\saas\\src\\AKC.Products.SaasService.HttpApi.Host\\bin\\Debug\\net6.0",
+    "DllName": "AKC.Products.SaasService.HttpApi.Host.dll",
+    "Url": "https://localhost:44381",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-administration",
+    "Name": "Administration",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\administration\\src\\AKC.Products.AdministrationService.HttpApi.Host\\bin\\Debug\\net6.0",
+    "DllName": "AKC.Products.AdministrationService.HttpApi.Host.dll",
+    "Url": "https://localhost:44367",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-masterdata",
+    "Name": "MasterData",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\master.data\\src\\AKC.Products.MasterDataService.HttpApi.Host\\bin\\Debug\\net6.0",
+    "DllName": "AKC.Products.MasterDataService.HttpApi.Host.dll",
+    "Url": "https://localhost:44364",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-member",
+    "Name": "Member",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\member\\src\\AKC.Products.MemberService.HttpApi.Host\\bin\\Debug\\net6.0",
+    "DllName": "AKC.Products.MemberService.HttpApi.Host.dll",
+    "Url": "https://localhost:44371",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-transaction",
+    "Name": "Transaction",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\transaction\\src\\AKC.Products.TransactionService.HttpApi.Host\\bin\\Debug\\net6.0",
+    "DllName": "AKC.Products.TransactionService.HttpApi.Host.dll",
+    "Url": "https://localhost:44368",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-customerjourney",
+    "Name": "CustomerJourney",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\customer.journey\\src\\AKC.Products.CustomerJourneyService.HttpApi.Host\\bin\\Debug\\net6.0",
+    "DllName": "AKC.Products.CustomerJourneyService.HttpApi.Host.dll",
+    "Url": "https://localhost:44363",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-gdpr",
+    "Name": "Gdpr",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\GDPR\\src\\Volo.Abp.Gdpr.HttpApi.Host\\bin\\Debug\\net6.0",
+    "DllName": "Volo.Abp.Gdpr.HttpApi.Host.dll",
+    "Url": "https://localhost:44362",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-webgateway",
+    "Name": "WebGateway",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\gateways\\web\\src\\AKC.Products.WebGateway\\bin\\Debug\\net6.0",
+    "DllName": "AKC.Products.WebGateway.dll",
+    "Url": "https://localhost:44325",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-admin-portal",
+    "Name": "Admin Portal (Angular)",
+    "Type": "FE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-admin-portal\\angular",
+    "ProjectPath": "{{loyaltyRoot}}\\loyalty-admin-portal\\angular",
+    "ConfigPath": "{{loyaltyRoot}}\\loyalty-admin-portal\\angular\\src\\assets\\env.js",
+    "DllName": "",
+    "Url": "https://localhost:4200",
+    "IsExe": false,
+    "RunCommand": "npm run start",
+    "BuildCommand": "npm run build"
+  }
+]

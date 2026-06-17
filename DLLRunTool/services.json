@@ -1,0 +1,121 @@
+[
+  {
+    "Name": "Redis",
+    "FolderPath": "{{redisPath}}",
+    "DllName": "redis-server.exe",
+    "Url": "",
+    "IsExe": true
+  },
+  {
+    "Name": "WebGateway",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\gateways\\web\\FPTCXSuite.WebGateway\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.WebGateway.dll",
+    "Url": "http://localhost:44323",
+    "IsExe": false
+  },
+  {
+    "Name": "AuthServer",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\apps\\auth-server\\FPTCXSuite.AuthServer\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.AuthServer.dll",
+    "Url": "http://localhost:44366",
+    "IsExe": false
+  },
+  {
+    "Name": "Administration",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\services\\administration\\FPTCXSuite.AdministrationService\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.AdministrationService.dll",
+    "Url": "http://localhost:44392",
+    "IsExe": false
+  },
+  {
+    "Name": "Saas",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\services\\saas\\FPTCXSuite.SaasService\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.SaasService.dll",
+    "Url": "http://localhost:44357",
+    "IsExe": false
+  },
+  {
+    "Name": "AuditLogging",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\services\\audit-logging\\FPTCXSuite.AuditLoggingService\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.AuditLoggingService.dll",
+    "Url": "http://localhost:44372",
+    "IsExe": false
+  },
+  {
+    "Name": "Gdpr",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\services\\gdpr\\FPTCXSuite.GdprService\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.GdprService.dll",
+    "Url": "http://localhost:44361",
+    "IsExe": false
+  },
+  {
+    "Name": "FileManagement",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\services\\file-management\\FPTCXSuite.FileManagementService\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.FileManagementService.dll",
+    "Url": "http://localhost:44322",
+    "IsExe": false
+  },
+  {
+    "Name": "Language",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\services\\language\\FPTCXSuite.LanguageService\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.LanguageService.dll",
+    "Url": "http://localhost:44341",
+    "IsExe": false
+  },
+  {
+    "Name": "Chat",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\services\\chat\\FPTCXSuite.ChatService\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.ChatService.dll",
+    "Url": "http://localhost:44370",
+    "IsExe": false
+  },
+  {
+    "Name": "Identity",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\services\\identity\\FPTCXSuite.IdentityService\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.IdentityService.dll",
+    "Url": "http://localhost:44368",
+    "IsExe": false
+  },
+  {
+    "Name": "BackgroundJobs",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\services\\background-jobs\\FPTCXSuite.BackgroundJobsService\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.BackgroundJobsService.dll",
+    "Url": "http://localhost:44320",
+    "IsExe": false
+  },
+  {
+    "Name": "IntegrationHub",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\services\\integration-hub\\FPTCXSuite.IntegrationHubService\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.IntegrationHubService.dll",
+    "Url": "http://localhost:44314",
+    "IsExe": false
+  },
+  {
+    "Name": "Marketing",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\services\\marketing\\FPTCXSuite.MarketingService\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.MarketingService.dll",
+    "Url": "http://localhost:44390",
+    "IsExe": false
+  },
+  {
+    "Name": "Notification",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\services\\notification\\FPTCXSuite.NotificationService\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.NotificationService.dll",
+    "Url": "http://localhost:44367",
+    "IsExe": false
+  },
+  {
+    "Name": "HealthCare",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\services\\healthcare\\FPTCXSuite.HealthCareService\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.HealthCareService.dll",
+    "Url": "http://localhost:44303",
+    "IsExe": false
+  },
+  {
+    "Name": "CDP",
+    "FolderPath": "{{fptcxRoot}}\\fptcxsuite\\services\\cdp\\FPTCXSuite.CdpService\\bin\\Debug\\net9.0",
+    "DllName": "FPTCXSuite.CdpService.dll",
+    "Url": "http://localhost:44318",
+    "IsExe": false
+  }
+]
