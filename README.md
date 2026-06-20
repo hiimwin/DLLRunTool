@@ -86,7 +86,7 @@ Chạy thử sau build:
 ### Services Dashboard
 
 - **Run / Stop / Restart / Build** từng microservice
-- Lệnh chạy BE: `dotnet {Service}.dll --urls "https://localhost:PORT"` (từ thư mục `bin\Debug\net6.0`)
+- Lệnh chạy BE: `dotnet {Service}.dll --urls "https://localhost:PORT"` (tự tìm `bin\Debug\netX.0` theo `.csproj`)
 - **Console Log** theo service, lọc log, **Stop All**
 - **Khóa service** (icon ổ khóa): service khóa không bị dừng khi **Stop All** hoặc thoát tool (chọn *Có* dừng service). Trạng thái lưu trong `service-locks.json`
 - Toggle **Console riêng** — mở cửa sổ console riêng cho từng process

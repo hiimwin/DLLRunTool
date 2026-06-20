@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json.Serialization;
+using DLLRunTool.Services;
 
 namespace DLLRunTool.Models;
 
@@ -113,6 +114,12 @@ public class ServiceConfig
         if (string.IsNullOrWhiteSpace(DllName) || IsExe || IsFrontEnd)
             return null;
 
+        var project = ResolveSourceProjectPath();
+        var preferredTfm = DotNetOutputResolver.ReadTargetFramework(TryResolveCsprojPath());
+        var resolved = DotNetOutputResolver.FindBestDllPath(project, DllName, preferredTfm);
+        if (resolved != null)
+            return resolved;
+
         if (!string.IsNullOrWhiteSpace(FolderPath))
         {
             var direct = Path.Combine(FolderPath, DllName);
@@ -120,12 +127,7 @@ public class ServiceConfig
                 return Path.GetFullPath(direct);
         }
 
-        var project = ResolveProjectPath();
-        var binDir = Path.Combine(project, "bin");
-        if (!Directory.Exists(binDir))
-            return null;
-
-        return Directory.EnumerateFiles(binDir, DllName, SearchOption.AllDirectories).FirstOrDefault();
+        return null;
     }
 
     public string ResolveDllFullPath() =>

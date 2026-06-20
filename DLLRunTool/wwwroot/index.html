@@ -205,7 +205,8 @@
           </div>
         </section>
 
-        <section class="console-section">
+        <section class="console-section" id="consoleSection">
+          <div class="console-resize-handle" id="consoleResizeHandle" title="Kéo để thay đổi chiều cao log"></div>
           <div class="console-header">
             <div class="console-header-left">
               <span>Console Log</span>
@@ -218,14 +219,15 @@
               </div>
             </div>
             <div class="console-header-actions">
-              <label class="console-mode-toggle" title="Bật để mở cửa sổ CMD/console riêng khi Run — đóng console sẽ tắt service">
+              <label class="console-mode-toggle" title="Bật: mở cửa sổ CMD ngoài (log KHÔNG hiện ở khung dưới). Tắt: log hiện trong tool.">
                 <input type="checkbox" id="chkShowConsole" />
-                <span>Console riêng</span>
+                <span>Mở CMD riêng</span>
               </label>
               <button class="btn ghost small" id="btnStopAll" title="Dừng service đang chạy (trừ service đã khóa)">Stop All</button>
               <button class="btn ghost small" id="btnClearLog">Clear</button>
             </div>
           </div>
+          <p class="console-mode-hint hidden" id="consoleModeHint"></p>
           <div class="console-output" id="consoleOutput"></div>
         </section>
       </div>

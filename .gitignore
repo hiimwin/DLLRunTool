@@ -5,3 +5,5 @@ publish/
 *.suo
 .vs/
 *.WebView2/
+paths.local.json
+*.Backup.tmp

@@ -12,6 +12,7 @@
     theme: localStorage.getItem("mcp-theme") || "dark",
     workspace: null,
     logFilterServiceId: "",
+    logHistory: [],
     appVersion: "",
     updateInfo: null
   };
@@ -58,6 +59,9 @@
     logFilterBtn: $("logFilterBtn"),
     logFilterLabel: $("logFilterLabel"),
     logFilterMenu: $("logFilterMenu"),
+    consoleSection: $("consoleSection"),
+    consoleResizeHandle: $("consoleResizeHandle"),
+    consoleModeHint: $("consoleModeHint"),
     themeToggle: $("themeToggle"),
     settingsModal: $("settingsModal"),
     modalTitle: $("modalTitle"),
@@ -331,6 +335,7 @@
     const payload = { serviceId, platformId: state.platformId };
     switch (action) {
       case "run":
+        setLogFilterValue(serviceId, findServiceName(serviceId));
         setLocalServiceFlags(serviceId, { isStarting: true });
         setRunProgress({ serviceId, active: true, label: "Đang khởi động..." });
         Bridge.send("run", payload);
@@ -346,11 +351,16 @@
         state.modalServiceId = serviceId;
         Bridge.send("selectService", payload);
         break;
-      case "logs":
-        state.logFilterServiceId = serviceId;
-        setLogFilterValue(serviceId, findServiceName(serviceId));
-        appendLog({ level: "info", message: `Đang lọc log: ${findServiceName(serviceId)}` });
+      case "logs": {
+        const name = findServiceName(serviceId);
+        setLogFilterValue(serviceId, name);
+        appendLog({
+          serviceId,
+          level: "info",
+          message: `Đang lọc log: ${name}`
+        });
         break;
+      }
       case "lock": {
         const svc = getActiveServices().find((s) => s.id === serviceId);
         Bridge.send("toggleServiceLock", {
@@ -373,6 +383,7 @@
         item.classList.toggle("active", item.dataset.id === (serviceId || ""));
       });
     }
+    renderConsoleLogs();
   }
 
   function closeLogFilterMenu() {
@@ -382,8 +393,65 @@
 
   function toggleLogFilterMenu() {
     if (!els.logFilterMenu || !els.logFilterBtn) return;
-    const open = els.logFilterMenu.classList.toggle("hidden");
-    els.logFilterBtn.setAttribute("aria-expanded", open ? "false" : "true");
+    const isHidden = els.logFilterMenu.classList.toggle("hidden");
+    els.logFilterBtn.setAttribute("aria-expanded", isHidden ? "false" : "true");
+  }
+
+  function matchesLogFilter(payload, filterId) {
+    if (!filterId) return true;
+    if (!payload.serviceId) return true;
+    return payload.serviceId === filterId;
+  }
+
+  function pushLogHistory(payload) {
+    state.logHistory.push(payload);
+  }
+
+  function createLogLineElement(payload) {
+    const line = document.createElement("div");
+    line.className = `log-line ${payload.level || "info"}`;
+    const msg = payload.message || "";
+    if (msg.toLowerCase().includes("stopped") || msg.includes("đã dừng") || msg.includes("đã thoát")) {
+      line.classList.add("status-stopped");
+    }
+    if (msg.toLowerCase().includes("running") || msg.includes("đang chạy")) {
+      line.classList.add("status-running");
+    }
+    const svcTag = payload.serviceName
+      ? `<span class="log-svc">[${escapeHtml(payload.serviceName)}]</span> `
+      : (payload.serviceId ? `<span class="log-svc">[${escapeHtml(findServiceName(payload.serviceId))}]</span> ` : "");
+    line.innerHTML = `<span class="log-time">[${payload.timestamp || ""}]</span>${svcTag}${escapeHtml(msg)}`;
+    return line;
+  }
+
+  function renderLogFilterEmptyHint(filterId) {
+    const name = findServiceName(filterId);
+    const cmdMode = !!(els.chkShowConsole && els.chkShowConsole.checked);
+    const hint = document.createElement("div");
+    hint.className = "log-line info log-filter-empty";
+    hint.textContent = cmdMode
+      ? `Chưa có log cho ${name} trong tool. Đang bật "Mở CMD riêng" — xem log trong cửa sổ CMD (Alt+Tab), hoặc tắt checkbox đó rồi STOP + RUN lại.`
+      : `Chưa có log cho ${name} trong buffer. Nếu service đã chạy trước khi lọc, hãy STOP rồi RUN lại từ tool để stream log.`;
+    return hint;
+  }
+
+  function renderConsoleLogs() {
+    if (!els.consoleOutput) return;
+
+    const filterId = state.logFilterServiceId || "";
+    const entries = state.logHistory.filter((e) => matchesLogFilter(e, filterId));
+
+    els.consoleOutput.innerHTML = "";
+
+    if (filterId && entries.length === 0) {
+      els.consoleOutput.appendChild(renderLogFilterEmptyHint(filterId));
+      return;
+    }
+
+    entries.forEach((entry) => {
+      els.consoleOutput.appendChild(createLogLineElement(entry));
+    });
+    els.consoleOutput.scrollTop = els.consoleOutput.scrollHeight;
   }
 
   function findServiceName(serviceId) {
@@ -724,29 +792,25 @@
   }
 
   function appendLog(payload) {
+    const entry = {
+      level: "info",
+      timestamp: "",
+      ...payload
+    };
+    pushLogHistory(entry);
+
     const filterId = state.logFilterServiceId || "";
-    if (filterId && payload.serviceId && payload.serviceId !== filterId) {
+    if (!matchesLogFilter(entry, filterId)) {
       return;
     }
 
-    const line = document.createElement("div");
-    line.className = `log-line ${payload.level || "info"}`;
-    const msg = payload.message || "";
-    if (msg.toLowerCase().includes("stopped") || msg.includes("đã dừng") || msg.includes("đã thoát")) {
-      line.classList.add("status-stopped");
-    }
-    if (msg.toLowerCase().includes("running") || msg.includes("đang chạy")) {
-      line.classList.add("status-running");
-    }
-    const svcTag = payload.serviceName
-      ? `<span class="log-svc">[${escapeHtml(payload.serviceName)}]</span> `
-      : (payload.serviceId ? `<span class="log-svc">[${escapeHtml(findServiceName(payload.serviceId))}]</span> ` : "");
-    line.innerHTML = `<span class="log-time">[${payload.timestamp || ""}]</span>${svcTag}${escapeHtml(msg)}`;
-    els.consoleOutput.appendChild(line);
+    if (!els.consoleOutput) return;
+
+    const emptyHint = els.consoleOutput.querySelector(".log-filter-empty");
+    if (emptyHint) emptyHint.remove();
+
+    els.consoleOutput.appendChild(createLogLineElement(entry));
     els.consoleOutput.scrollTop = els.consoleOutput.scrollHeight;
-    while (els.consoleOutput.children.length > 800) {
-      els.consoleOutput.removeChild(els.consoleOutput.firstChild);
-    }
   }
 
   function escapeHtml(str) {
@@ -778,7 +842,10 @@
     applyTheme();
   };
 
-  els.btnClearLog.onclick = () => { els.consoleOutput.innerHTML = ""; };
+  els.btnClearLog.onclick = () => {
+    state.logHistory = [];
+    els.consoleOutput.innerHTML = "";
+  };
   els.btnStopAll.onclick = () => {
     const lockedRunning = getActiveServices().filter((s) => s.isRunning && s.isLocked);
     let msg = "Dừng tất cả service đang chạy?";
@@ -789,8 +856,66 @@
       Bridge.send("stopAll");
     }
   };
+  function updateConsoleModeHint(showExternal) {
+    if (!els.consoleModeHint) return;
+    if (showExternal) {
+      els.consoleModeHint.textContent =
+        "Đang bật CMD riêng: log của service nằm trong cửa sổ CMD bên ngoài (Alt+Tab), không hiện ở khung này. Tắt \"Mở CMD riêng\" để xem log trong tool.";
+      els.consoleModeHint.classList.remove("hidden");
+    } else {
+      els.consoleModeHint.textContent = "";
+      els.consoleModeHint.classList.add("hidden");
+    }
+  }
+
+  function applyConsoleHeight(px) {
+    const height = Math.max(140, Math.min(window.innerHeight * 0.75, px));
+    if (els.consoleSection) {
+      els.consoleSection.style.setProperty("--console-height", `${height}px`);
+    }
+    localStorage.setItem("mcp-console-height", String(Math.round(height)));
+  }
+
+  function initConsoleResize() {
+    const saved = parseInt(localStorage.getItem("mcp-console-height") || "320", 10);
+    if (!Number.isNaN(saved)) applyConsoleHeight(saved);
+
+    const handle = els.consoleResizeHandle;
+    const section = els.consoleSection;
+    if (!handle || !section) return;
+
+    let dragging = false;
+    let startY = 0;
+    let startHeight = 0;
+
+    const onMove = (clientY) => {
+      const delta = startY - clientY;
+      applyConsoleHeight(startHeight + delta);
+    };
+
+    handle.addEventListener("mousedown", (e) => {
+      dragging = true;
+      startY = e.clientY;
+      startHeight = section.getBoundingClientRect().height;
+      section.classList.add("is-resizing");
+      e.preventDefault();
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      onMove(e.clientY);
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (!dragging) return;
+      dragging = false;
+      section.classList.remove("is-resizing");
+    });
+  }
+
   if (els.chkShowConsole) {
     els.chkShowConsole.onchange = () => {
+      updateConsoleModeHint(els.chkShowConsole.checked);
       Bridge.send("saveRunSettings", { showConsoleWindow: els.chkShowConsole.checked });
     };
   }
@@ -885,9 +1010,11 @@
     }
     if (payload.runSettings && els.chkShowConsole) {
       els.chkShowConsole.checked = !!payload.runSettings.showConsoleWindow;
+      updateConsoleModeHint(els.chkShowConsole.checked);
     }
     renderPlatforms();
     applyTheme();
+    initConsoleResize();
   });
 
   Bridge.on("updateAvailable", (info) => {
@@ -933,7 +1060,10 @@
   });
 
   Bridge.on("runSettings", (payload) => {
-    if (els.chkShowConsole) els.chkShowConsole.checked = !!payload.showConsoleWindow;
+    if (els.chkShowConsole) {
+      els.chkShowConsole.checked = !!payload.showConsoleWindow;
+      updateConsoleModeHint(els.chkShowConsole.checked);
+    }
   });
 
   Bridge.on("log", appendLog);
@@ -942,4 +1072,5 @@
   Bridge.on("runProgress", setRunProgress);
 
   applyTheme();
+  initConsoleResize();
 })();

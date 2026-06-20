@@ -1,6 +1,6 @@
 {
-  "version": "1.1.0",
-  "releasedAt": "2026-06-17",
-  "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1.1.0/Win_Trung-MicroservicesControlPanel.zip",
-  "releaseNotes": "Bản đầu tiên trên GitHub Releases"
+  "version": "1.1.2",
+  "releasedAt": "2026-06-18",
+  "downloadUrl": "",
+  "releaseNotes": "Sửa lọc log theo service, buffer không giới hạn dòng"
 }

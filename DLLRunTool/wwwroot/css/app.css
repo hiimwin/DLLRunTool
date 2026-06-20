@@ -598,12 +598,62 @@ textarea {
 .btn.small { padding: 6px 12px; font-size: 12px; }
 
 .console-section {
-  height: 200px;
+  --console-height: 320px;
+  height: var(--console-height);
+  min-height: 140px;
+  max-height: 75vh;
   flex-shrink: 0;
   border-top: 1px solid var(--border);
   background: var(--bg-console);
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+.console-section.is-resizing {
+  user-select: none;
+  cursor: row-resize;
+}
+
+.console-resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: row-resize;
+  z-index: 30;
+  transform: translateY(-3px);
+}
+
+.console-resize-handle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40px;
+  height: 3px;
+  margin-left: -20px;
+  margin-top: -1.5px;
+  border-radius: 2px;
+  background: var(--border);
+  opacity: 0.85;
+  transition: background var(--transition), opacity var(--transition);
+}
+
+.console-resize-handle:hover::after,
+.console-section.is-resizing .console-resize-handle::after {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.console-mode-hint {
+  margin: 0;
+  padding: 6px 16px 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--warning);
+  flex-shrink: 0;
 }
 
 .console-header {
@@ -751,6 +801,12 @@ textarea {
 .log-line.success, .log-line.status-running { color: var(--success); }
 .log-line.warning, .log-line.status-stopped { color: var(--warning); }
 .log-line.error { color: var(--danger); }
+.log-filter-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 8px 0;
+  line-height: 1.45;
+}
 .log-time { color: var(--text-muted); margin-right: 8px; }
 
 .modal-overlay {

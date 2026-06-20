@@ -200,7 +200,7 @@ public sealed class AsyncCommandRunner
             ServiceId = service.Id,
             ServiceName = service.Name,
             Level = "success",
-            Message = $"{service.Name} mở cửa sổ Console (PID {process.Id}) — đóng console để tắt service."
+            Message = $"{service.Name} chạy trong CMD riêng (PID {process.Id}) — xem log bằng Alt+Tab tới cửa sổ CMD. Đóng CMD = tắt service."
         });
 
         return process;

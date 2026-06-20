@@ -842,8 +842,8 @@ public sealed class ServiceOrchestrator
         {
             Level = "info",
             Message = showConsoleWindow
-                ? "Chế độ chạy: cửa sổ Console riêng (đóng console = tắt service)."
-                : "Chế độ chạy: ẩn console, xem log ở Console Log bên dưới."
+                ? "Chế độ CMD riêng: log hiện trong cửa sổ CMD bên ngoài (Alt+Tab) — KHÔNG hiện trong Console Log. Đóng CMD = tắt service."
+                : "Chế độ mặc định: log service hiện trong Console Log bên dưới (kéo mép trên khung log để phóng to)."
         });
         SendRunSettings();
     }
@@ -1103,6 +1103,7 @@ public sealed class ServiceOrchestrator
             svc.FolderPath = WorkspacePathsStore.Resolve(svc.FolderPath);
             svc.ProjectPath = WorkspacePathsStore.Resolve(svc.ProjectPath);
             svc.ConfigPath = WorkspacePathsStore.Resolve(svc.ConfigPath);
+            svc.SyncFolderPathFromDisk();
         }
 
         return services;
