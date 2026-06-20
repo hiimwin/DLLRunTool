@@ -16,3 +16,4 @@ global.*.secrets.json
 service-locks.json
 run-settings.json
 backup-*.json
+service-logs/

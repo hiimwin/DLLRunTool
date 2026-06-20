@@ -141,6 +141,21 @@ public class ServiceDetailDto
 
     [JsonPropertyName("projectPath")]
     public string ProjectPath { get; set; } = "";
+
+    [JsonPropertyName("feBindings")]
+    public List<FeEnvBinding>? FeBindings { get; set; }
+}
+
+public sealed class FeEnvBinding
+{
+    [JsonPropertyName("envKey")]
+    public string EnvKey { get; set; } = "";
+
+    [JsonPropertyName("value")]
+    public string Value { get; set; } = "";
+
+    [JsonPropertyName("sourceService")]
+    public string? SourceService { get; set; }
 }
 
 public class LogPayload

@@ -13,7 +13,12 @@ public static class GlobalConfigManager
     public static string GetSecretsFilePath(string platformId, string category) =>
         Path.Combine(AppContext.BaseDirectory, $"global.{platformId}.{category.ToLowerInvariant()}.secrets.json");
 
-    public static async Task<ServiceUiConfig> LoadAsync(string platformId, string category, IEnumerable<ServiceConfig> services, CancellationToken ct = default)
+    public static async Task<ServiceUiConfig> LoadAsync(
+        string platformId,
+        string category,
+        IReadOnlyList<ServiceConfig> categoryServices,
+        IReadOnlyList<ServiceConfig> allServices,
+        CancellationToken ct = default)
     {
         var path = GetFilePath(platformId, category);
         ServiceUiConfig result;
@@ -21,10 +26,16 @@ public static class GlobalConfigManager
         {
             var json = await File.ReadAllTextAsync(path, ct).ConfigureAwait(false);
             result = JsonSerializer.Deserialize<ServiceUiConfig>(json, JsonOptions) ?? new ServiceUiConfig();
+            if (category.Equals("FE", StringComparison.OrdinalIgnoreCase))
+                await EnrichFeConfigAsync(result, categoryServices, allServices, ct).ConfigureAwait(false);
+        }
+        else if (category.Equals("FE", StringComparison.OrdinalIgnoreCase))
+        {
+            result = await BuildFeSeedConfigAsync(categoryServices, allServices, ct).ConfigureAwait(false);
         }
         else
         {
-            var seed = services.FirstOrDefault(CanApplyGlobalBeConfig);
+            var seed = categoryServices.FirstOrDefault(CanApplyGlobalBeConfig);
             if (seed == null)
                 return new ServiceUiConfig();
 
@@ -111,4 +122,35 @@ public static class GlobalConfigManager
         !service.IsExe &&
         !service.IsFrontEnd &&
         !string.IsNullOrEmpty(service.ResolveConfigPath());
+
+    private static async Task<ServiceUiConfig> BuildFeSeedConfigAsync(
+        IReadOnlyList<ServiceConfig> feServices,
+        IReadOnlyList<ServiceConfig> allServices,
+        CancellationToken ct)
+    {
+        var result = new ServiceUiConfig { EnvVars = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) };
+        var seed = feServices.FirstOrDefault(s => !string.IsNullOrEmpty(s.ResolveConfigPath()));
+        if (seed != null)
+            result = await ConfigFileManager.ReadConfigAsync(seed, ct).ConfigureAwait(false);
+
+        await EnrichFeConfigAsync(result, feServices, allServices, ct).ConfigureAwait(false);
+        return result;
+    }
+
+    private static async Task EnrichFeConfigAsync(
+        ServiceUiConfig result,
+        IReadOnlyList<ServiceConfig> feServices,
+        IReadOnlyList<ServiceConfig> allServices,
+        CancellationToken ct)
+    {
+        result.EnvVars ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var seed = feServices.FirstOrDefault(s => !string.IsNullOrEmpty(s.ResolveConfigPath()));
+        if (seed != null)
+        {
+            var template = await ConfigFileManager.ReadEnvJsTemplateAsync(seed, ct).ConfigureAwait(false);
+            result.EnvVars = FeConfigResolver.MergeTemplateAndFile(result.EnvVars, template);
+        }
+
+        FeConfigResolver.ApplyDynamicBindings(result.EnvVars, allServices);
+    }
 }

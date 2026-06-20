@@ -150,8 +150,8 @@ public sealed class AsyncCommandRunner
     {
         EnsureWorkingDirectory(cmd.WorkingDirectory, service.Name);
 
-        if (ShowConsoleWindow)
-            return StartVisibleConsoleService(service, cmd);
+        var logPath = ServiceLogMirror.EnsureLogFile(service.Id, service.Name);
+        ServiceLogMirror.Register(service.Id, logPath);
 
         var psi = new ProcessStartInfo
         {
@@ -172,36 +172,18 @@ public sealed class AsyncCommandRunner
         process.EnableRaisingEvents = true;
         AttachLogStreaming(service, process, "run");
         AttachProcessExitHandler(service, process);
-        return process;
-    }
 
-    private Process? StartVisibleConsoleService(ServiceConfig service, ResolvedRunCommand cmd)
-    {
-        var psi = new ProcessStartInfo
+        if (ShowConsoleWindow)
         {
-            FileName = cmd.FileName,
-            Arguments = cmd.Arguments,
-            WorkingDirectory = cmd.WorkingDirectory,
-            UseShellExecute = false,
-            CreateNoWindow = false,
-            WindowStyle = ProcessWindowStyle.Normal
-        };
-
-        var process = Process.Start(psi);
-        if (process == null)
-            throw new InvalidOperationException("Process.Start trả về null.");
-
-        service.ManagedProcess = process;
-        process.EnableRaisingEvents = true;
-        AttachProcessExitHandler(service, process);
-
-        _emitLog(new LogPayload
-        {
-            ServiceId = service.Id,
-            ServiceName = service.Name,
-            Level = "success",
-            Message = $"{service.Name} chạy trong CMD riêng (PID {process.Id}) — xem log bằng Alt+Tab tới cửa sổ CMD. Đóng CMD = tắt service."
-        });
+            ServiceLogMirror.OpenMirror(service.Id, service.Name);
+            _emitLog(new LogPayload
+            {
+                ServiceId = service.Id,
+                ServiceName = service.Name,
+                Level = "info",
+                Message = $"{service.Name}: log trong tool + CMD riêng (Alt+Tab)."
+            });
+        }
 
         return process;
     }
@@ -212,6 +194,9 @@ public sealed class AsyncCommandRunner
         {
             if (service.ManagedProcess?.Id == process.Id)
                 service.ManagedProcess = null;
+
+            ServiceLogMirror.CloseMirror(service.Id);
+            ServiceLogMirror.Unregister(service.Id);
 
             int exitCode;
             try { exitCode = process.ExitCode; }
@@ -499,6 +484,7 @@ public sealed class AsyncCommandRunner
                     Level = "info",
                     Message = $"[{phase}] {e.Data}"
                 });
+                ServiceLogMirror.AppendLine(service.Id, e.Data);
             }
         };
         process.ErrorDataReceived += (_, e) =>
@@ -512,6 +498,7 @@ public sealed class AsyncCommandRunner
                     Level = "error",
                     Message = $"[{phase}] {e.Data}"
                 });
+                ServiceLogMirror.AppendLine(service.Id, e.Data);
             }
         };
 

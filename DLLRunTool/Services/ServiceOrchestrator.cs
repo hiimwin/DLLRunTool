@@ -440,8 +440,9 @@ public sealed class ServiceOrchestrator
 
     private async Task SendGlobalConfigAsync(string category)
     {
+        var allServices = GetActiveServices();
         var services = GetServicesByCategory(category);
-        var config = await GlobalConfigManager.LoadAsync(_activePlatformId, category, services).ConfigureAwait(false);
+        var config = await GlobalConfigManager.LoadAsync(_activePlatformId, category, services, allServices).ConfigureAwait(false);
 
         _pushToUi(new BridgeResponse
         {
@@ -450,7 +451,10 @@ public sealed class ServiceOrchestrator
             {
                 platformId = _activePlatformId,
                 category,
-                config
+                config,
+                feBindings = category.Equals("FE", StringComparison.OrdinalIgnoreCase)
+                    ? FeConfigResolver.DescribeBindings(allServices)
+                    : null
             }
         });
     }
@@ -538,6 +542,15 @@ public sealed class ServiceOrchestrator
         ProcessTreeKiller.FindRunningProcess(service);
         var config = await ConfigFileManager.ReadConfigAsync(service).ConfigureAwait(false);
 
+        if (service.IsFrontEnd)
+        {
+            var allServices = GetActiveServices();
+            config.EnvVars ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var template = await ConfigFileManager.ReadEnvJsTemplateAsync(service).ConfigureAwait(false);
+            config.EnvVars = FeConfigResolver.MergeTemplateAndFile(config.EnvVars, template);
+            FeConfigResolver.ApplyDynamicBindings(config.EnvVars, allServices);
+        }
+
         _pushToUi(new BridgeResponse
         {
             Type = "serviceDetail",
@@ -554,7 +567,10 @@ public sealed class ServiceOrchestrator
                 ConnectionString = config.ConnectionString,
                 EnvVars = config.EnvVars ?? new Dictionary<string, string>(),
                 ConfigPath = service.ResolveConfigPath(),
-                ProjectPath = service.ResolveProjectPath()
+                ProjectPath = service.ResolveProjectPath(),
+                FeBindings = service.IsFrontEnd
+                    ? FeConfigResolver.DescribeBindings(GetActiveServices()).ToList()
+                    : null
             }
         });
     }
@@ -642,7 +658,7 @@ public sealed class ServiceOrchestrator
 
             await _commandRunner.RunServiceAsync(service).ConfigureAwait(false);
             service.SyncFolderPathFromDisk();
-            var mode = RunSettingsStore.ShowConsoleWindow ? "console riêng" : "log trong tool";
+            var mode = RunSettingsStore.ShowConsoleWindow ? "log tool + CMD mirror" : "log trong tool";
             PushLog(new LogPayload
             {
                 ServiceId = service.Id,
@@ -893,13 +909,43 @@ public sealed class ServiceOrchestrator
     {
         RunSettingsStore.SetShowConsoleWindow(showConsoleWindow);
         _commandRunner.ShowConsoleWindow = showConsoleWindow;
-        PushLog(new LogPayload
+
+        var running = GetActiveServices()
+            .Where(s => s.IsRunning && s.ManagedProcess != null && !s.ManagedProcess.HasExited)
+            .ToList();
+
+        if (showConsoleWindow)
         {
-            Level = "info",
-            Message = showConsoleWindow
-                ? "Chế độ CMD riêng: log hiện trong cửa sổ CMD bên ngoài (Alt+Tab) — KHÔNG hiện trong Console Log. Đóng CMD = tắt service."
-                : "Chế độ mặc định: log service hiện trong Console Log bên dưới (kéo mép trên khung log để phóng to)."
-        });
+            foreach (var service in running)
+            {
+                var logDir = Path.Combine(AppContext.BaseDirectory, "service-logs");
+                var logPath = Path.Combine(logDir, $"{service.Id}.log");
+                if (!File.Exists(logPath))
+                    logPath = ServiceLogMirror.EnsureLogFile(service.Id, service.Name);
+                else
+                    ServiceLogMirror.Register(service.Id, logPath);
+
+                ServiceLogMirror.OpenMirror(service.Id, service.Name);
+            }
+
+            PushLog(new LogPayload
+            {
+                Level = "info",
+                Message = running.Count > 0
+                    ? $"CMD riêng: log vẫn hiện trong Console Log; đã mở {running.Count} cửa sổ mirror cho service đang chạy."
+                    : "CMD riêng: log vẫn hiện trong Console Log; cửa sổ mirror mở khi RUN service."
+            });
+        }
+        else
+        {
+            ServiceLogMirror.CloseAllMirrors();
+            PushLog(new LogPayload
+            {
+                Level = "info",
+                Message = "Log chỉ hiện trong Console Log bên dưới."
+            });
+        }
+
         SendRunSettings();
     }
 

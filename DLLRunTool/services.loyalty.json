@@ -79,56 +79,6 @@
     "IsExe": false
   },
   {
-    "Id": "loyalty-member",
-    "Name": "Member",
-    "Type": "BE",
-    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\member\\src\\AKC.Products.MemberService.HttpApi.Host",
-    "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\member\\src\\AKC.Products.MemberService.HttpApi.Host",
-    "DllName": "AKC.Products.MemberService.HttpApi.Host.dll",
-    "Url": "https://localhost:44371",
-    "IsExe": false
-  },
-  {
-    "Id": "loyalty-transaction",
-    "Name": "Transaction",
-    "Type": "BE",
-    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\transaction\\src\\AKC.Products.TransactionService.HttpApi.Host",
-    "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\transaction\\src\\AKC.Products.TransactionService.HttpApi.Host",
-    "DllName": "AKC.Products.TransactionService.HttpApi.Host.dll",
-    "Url": "https://localhost:44368",
-    "IsExe": false
-  },
-  {
-    "Id": "loyalty-syncdata",
-    "Name": "SyncData",
-    "Type": "BE",
-    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\sync.data\\src\\AKC.Products.SyncDataService.HttpApi.Host",
-    "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\sync.data\\src\\AKC.Products.SyncDataService.HttpApi.Host",
-    "DllName": "AKC.Products.SyncDataService.HttpApi.Host.dll",
-    "Url": "https://localhost:44370",
-    "IsExe": false
-  },
-  {
-    "Id": "loyalty-customerjourney",
-    "Name": "CustomerJourney",
-    "Type": "BE",
-    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\customer.journey\\src\\AKC.Products.CustomerJourneyService.HttpApi.Host",
-    "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\customer.journey\\src\\AKC.Products.CustomerJourneyService.HttpApi.Host",
-    "DllName": "AKC.Products.CustomerJourneyService.HttpApi.Host.dll",
-    "Url": "https://localhost:44363",
-    "IsExe": false
-  },
-  {
-    "Id": "loyalty-gdpr",
-    "Name": "Gdpr",
-    "Type": "BE",
-    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\GDPR\\src\\Volo.Abp.Gdpr.HttpApi.Host",
-    "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\GDPR\\src\\Volo.Abp.Gdpr.HttpApi.Host",
-    "DllName": "Volo.Abp.Gdpr.HttpApi.Host.dll",
-    "Url": "https://localhost:44362",
-    "IsExe": false
-  },
-  {
     "Id": "loyalty-masterdata-job",
     "Name": "MasterData Job",
     "Type": "BE",
@@ -136,6 +86,16 @@
     "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\master.data\\src\\AKC.Products.MasterDataService.Job.Host",
     "DllName": "AKC.Products.MasterDataService.Job.Host.dll",
     "Url": "https://localhost:44365",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-member",
+    "Name": "Member",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\member\\src\\AKC.Products.MemberService.HttpApi.Host",
+    "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\member\\src\\AKC.Products.MemberService.HttpApi.Host",
+    "DllName": "AKC.Products.MemberService.HttpApi.Host.dll",
+    "Url": "https://localhost:44371",
     "IsExe": false
   },
   {
@@ -149,6 +109,16 @@
     "IsExe": false
   },
   {
+    "Id": "loyalty-customerjourney",
+    "Name": "CustomerJourney",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\customer.journey\\src\\AKC.Products.CustomerJourneyService.HttpApi.Host",
+    "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\customer.journey\\src\\AKC.Products.CustomerJourneyService.HttpApi.Host",
+    "DllName": "AKC.Products.CustomerJourneyService.HttpApi.Host.dll",
+    "Url": "https://localhost:44363",
+    "IsExe": false
+  },
+  {
     "Id": "loyalty-customerjourney-job",
     "Name": "CustomerJourney Job",
     "Type": "BE",
@@ -156,6 +126,16 @@
     "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\customer.journey\\src\\AKC.Products.CustomerJourneyService.Job.Host",
     "DllName": "AKC.Products.CustomerJourneyService.Job.Host.dll",
     "Url": "https://localhost:44373",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-transaction",
+    "Name": "Transaction",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\transaction\\src\\AKC.Products.TransactionService.HttpApi.Host",
+    "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\transaction\\src\\AKC.Products.TransactionService.HttpApi.Host",
+    "DllName": "AKC.Products.TransactionService.HttpApi.Host.dll",
+    "Url": "https://localhost:44368",
     "IsExe": false
   },
   {
@@ -169,6 +149,16 @@
     "IsExe": false
   },
   {
+    "Id": "loyalty-syncdata",
+    "Name": "SyncData",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\sync.data\\src\\AKC.Products.SyncDataService.HttpApi.Host",
+    "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\sync.data\\src\\AKC.Products.SyncDataService.HttpApi.Host",
+    "DllName": "AKC.Products.SyncDataService.HttpApi.Host.dll",
+    "Url": "https://localhost:44370",
+    "IsExe": false
+  },
+  {
     "Id": "loyalty-syncdata-job",
     "Name": "SyncData Job",
     "Type": "BE",
@@ -176,6 +166,16 @@
     "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\sync.data\\src\\AKC.Products.SyncDataService.Job.Host",
     "DllName": "AKC.Products.SyncDataService.Job.Host.dll",
     "Url": "https://localhost:44375",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-gdpr",
+    "Name": "Gdpr",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\GDPR\\src\\Volo.Abp.Gdpr.HttpApi.Host",
+    "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\GDPR\\src\\Volo.Abp.Gdpr.HttpApi.Host",
+    "DllName": "Volo.Abp.Gdpr.HttpApi.Host.dll",
+    "Url": "https://localhost:44362",
     "IsExe": false
   },
   {

@@ -71,6 +71,34 @@ public static class ConfigFileManager
         return result;
     }
 
+    /// <summary>Đọc danh sách key từ env.prod.js (hoặc env.js) để hiển thị đủ biến FE trong tool.</summary>
+    public static async Task<Dictionary<string, string>> ReadEnvJsTemplateAsync(ServiceConfig service, CancellationToken ct = default)
+    {
+        var project = service.ResolveSourceProjectPath();
+        if (string.IsNullOrWhiteSpace(project))
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        var assetsDir = Path.Combine(project, "src", "assets");
+        var candidates = new[]
+        {
+            Path.Combine(assetsDir, "env.prod.js"),
+            Path.Combine(assetsDir, "env.js")
+        };
+
+        foreach (var path in candidates)
+        {
+            if (!File.Exists(path))
+                continue;
+
+            var content = await File.ReadAllTextAsync(path, ct).ConfigureAwait(false);
+            var parsed = ParseEnvJs(content);
+            if (parsed.Count > 0)
+                return parsed.ToDictionary(kv => kv.Key, kv => "", StringComparer.OrdinalIgnoreCase);
+        }
+
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    }
+
     public static async Task SaveConfigAsync(ServiceConfig service, ServiceUiConfig config, CancellationToken ct = default)
     {
         var configPath = service.ResolveConfigPath();

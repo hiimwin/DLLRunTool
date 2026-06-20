@@ -34,61 +34,73 @@
         </div>
       </header>
 
-      <nav class="category-tabs">
-        <button class="category-tab active" data-category="BE">Back-End</button>
-        <button class="category-tab" data-category="FE">Front-End</button>
+      <nav class="view-tabs" aria-label="Điều hướng chính">
+        <button class="view-tab active" data-view="dashboard">Dịch vụ</button>
+        <button class="view-tab" data-view="workspace">Workspace</button>
+        <button class="view-tab" data-view="global">Cấu hình chung</button>
+        <button class="view-tab" data-view="backup">Sao lưu</button>
       </nav>
 
-      <nav class="view-tabs">
-        <button class="view-tab active" data-view="dashboard">Services Dashboard</button>
-        <button class="view-tab" data-view="workspace">Workspace Paths</button>
-        <button class="view-tab" data-view="global">Global Configuration</button>
-        <button class="view-tab" data-view="backup">Export / Import</button>
-      </nav>
-
-      <div class="update-banner hidden" id="updateBanner">
-        <div class="update-banner-icon" aria-hidden="true">⬆</div>
-        <div class="update-banner-body">
-          <strong id="updateBannerTitle">Có bản cập nhật mới</strong>
-          <p id="updateBannerMessage"></p>
-        </div>
-        <div class="update-banner-actions">
-          <button class="btn primary small" id="btnDownloadUpdate">Cập nhật ngay</button>
-          <button class="btn ghost small" id="btnCheckUpdate">Kiểm tra lại</button>
-          <button class="btn ghost small" id="btnDismissUpdate">Để sau</button>
-        </div>
+      <div class="context-bar" id="contextBar" aria-label="Nhóm service">
+        <span class="context-bar-label">Nhóm</span>
+        <nav class="category-tabs" id="categoryTabs">
+          <button class="category-tab active" data-category="BE">Back-End</button>
+          <button class="category-tab" data-category="FE">Front-End</button>
+        </nav>
+        <span class="context-bar-hint" id="contextBarHint"></span>
       </div>
 
       <div class="workspace">
+        <div class="update-banner hidden" id="updateBanner">
+          <div class="update-banner-icon" aria-hidden="true">⬆</div>
+          <div class="update-banner-body">
+            <strong id="updateBannerTitle">Có bản cập nhật mới</strong>
+            <p id="updateBannerMessage"></p>
+          </div>
+          <div class="update-banner-actions">
+            <button class="btn primary small" id="btnDownloadUpdate">Cập nhật ngay</button>
+            <button class="btn ghost small" id="btnCheckUpdate">Kiểm tra lại</button>
+            <button class="btn ghost small" id="btnDismissUpdate">Để sau</button>
+          </div>
+        </div>
+
         <div class="workspace-banner hidden" id="workspaceBanner">
           <span id="workspaceBannerText"></span>
           <button class="btn ghost small" id="btnOpenWorkspace">Cấu hình đường dẫn</button>
         </div>
 
         <section class="view-panel" id="dashboardView">
-          <div class="dashboard-toolbar">
-            <button class="btn ghost small" id="btnReloadServices" title="Tải lại danh sách từ services.loyalty.json / services.json (tự cập nhật khi lưu file)">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-              Tải lại services
-            </button>
-            <span class="dashboard-toolbar-hint">Thêm dòng vào <code>services.loyalty.json</code> → lưu → tự hiện dòng mới</span>
+          <div class="panel-card dashboard-panel">
+            <div class="panel-card-header">
+              <div>
+                <h2>Danh sách service</h2>
+                <p class="panel-card-desc" id="dashboardDesc">Quản lý chạy / dừng / build các service Back-End</p>
+              </div>
+              <button class="btn ghost small" id="btnReloadServices" title="Tải lại danh sách từ services.loyalty.json / services.json (tự cập nhật khi lưu file)">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                Tải lại
+              </button>
+            </div>
+            <p class="section-desc dashboard-hint">Thêm dòng vào <code>services.loyalty.json</code> → lưu file → danh sách tự cập nhật</p>
+            <div class="dashboard-list" id="dashboardList"></div>
           </div>
-          <div class="dashboard-list" id="dashboardList"></div>
         </section>
 
         <section class="view-panel hidden" id="workspaceView">
-          <div class="global-panel workspace-panel">
-            <div class="global-header">
-              <h2>Workspace Paths</h2>
-              <p>Mỗi máy chỉ cần cấu hình <strong>1 lần</strong> các thư mục gốc. File <code>paths.local.json</code> nằm cạnh file exe — không share sang máy khác.</p>
-              <p class="paths-file-hint" id="workspacePathsFile"></p>
+          <div class="panel-card workspace-panel">
+            <div class="panel-card-header">
+              <div>
+                <h2>Workspace Paths</h2>
+                <p class="panel-card-desc">Cấu hình thư mục gốc trên máy — mỗi máy chỉ cần làm <strong>1 lần</strong></p>
+              </div>
             </div>
+            <p class="paths-file-hint" id="workspacePathsFile"></p>
             <div class="workspace-path-list" id="workspacePathList"></div>
             <div class="workspace-missing hidden" id="workspaceMissing">
               <h3>Service không tìm thấy thư mục</h3>
               <ul id="workspaceMissingList"></ul>
             </div>
-            <div class="action-bar">
+            <div class="action-bar panel-card-footer">
               <button class="btn primary" id="btnSaveWorkspace">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
                 Lưu workspace paths
@@ -98,32 +110,53 @@
         </section>
 
         <section class="view-panel hidden" id="globalView">
-          <div class="global-panel">
-            <div class="global-header">
-              <h2>Cấu hình chung</h2>
-              <p id="globalSubtitle">Áp dụng cho tất cả services trong tab hiện tại</p>
+          <div class="panel-card global-panel">
+            <div class="panel-card-header">
+              <div>
+                <h2>Cấu hình chung</h2>
+                <p class="panel-card-desc" id="globalSubtitle">Áp dụng cho tất cả service trong nhóm đang chọn</p>
+              </div>
+              <span class="scope-badge" id="globalScopeBadge">Back-End</span>
             </div>
             <div id="globalBeConfig">
-              <div class="form-grid">
-                <label>
-                  <span>Scheme</span>
-                  <select id="globalScheme"><option value="https">https</option><option value="http">http</option></select>
-                </label>
-                <label>
-                  <span>Host</span>
-                  <input type="text" id="globalHost" placeholder="localhost" />
-                </label>
+              <div class="form-section">
+                <h3 class="form-section-title">Kết nối HTTP</h3>
+                <div class="form-grid form-grid-2">
+                  <label>
+                    <span>Scheme</span>
+                    <select id="globalScheme"><option value="https">https</option><option value="http">http</option></select>
+                  </label>
+                  <label>
+                    <span>Host</span>
+                    <input type="text" id="globalHost" placeholder="localhost" />
+                  </label>
+                </div>
+              </div>
+              <div class="form-section">
+                <h3 class="form-section-title">Database</h3>
+                <p class="section-desc">Ghi vào <code>appsettings.secrets.json</code> (mọi service BE) — không ghi vào <code>appsettings.json</code></p>
                 <label class="full-width">
-                  <span>Database — ghi vào <code>appsettings.secrets.json</code> (mọi service), không ghi vào appsettings.json</span>
-                  <textarea id="globalConnectionString" rows="4"></textarea>
+                  <span>Connection string</span>
+                  <textarea id="globalConnectionString" rows="4" placeholder="Server=...;Database=..."></textarea>
                 </label>
               </div>
             </div>
             <div id="globalFeConfig" class="hidden">
-              <div class="form-grid" id="globalEnvContainer"></div>
-              <button class="btn ghost small" id="globalAddEnv">+ Thêm biến env</button>
+              <div class="form-section">
+                <h3 class="form-section-title">Biến môi trường <code>env.js</code></h3>
+                <p class="section-desc fe-bindings-hint hidden" id="globalFeBindingsHint"></p>
+                <div class="env-editor">
+                  <div class="env-table-header">
+                    <span>Key</span>
+                    <span>Value</span>
+                    <span></span>
+                  </div>
+                  <div id="globalEnvContainer"></div>
+                </div>
+                <button class="btn ghost small" id="globalAddEnv">+ Thêm biến</button>
+              </div>
             </div>
-            <div class="action-bar">
+            <div class="action-bar panel-card-footer">
               <button class="btn primary" id="btnSaveGlobal">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
                 Lưu &amp; Áp dụng tất cả
@@ -133,29 +166,11 @@
         </section>
 
         <section class="view-panel hidden" id="backupView">
-          <div class="global-panel backup-panel">
-            <div class="global-header">
-              <h2>Export / Import cấu hình</h2>
-              <p>Sao lưu/khôi phục config vào <strong>source</strong>. File backup có thể chứa password — <strong>không commit, không gửi chat/email</strong>.</p>
-            </div>
-
-            <div class="backup-section local-defaults-section">
-              <h3>Cấu hình Local mặc định</h3>
-              <p class="section-desc">Tự quét từ source hiện tại (BE: appsettings + launchSettings + ocelot · FE: env.js) để làm bản chuẩn chạy local. <strong>Apply Local</strong> chỉ khôi phục snapshot đã quét — nếu source chưa đổi thì Git sẽ không thấy diff. Để áp cấu hình đã chỉnh trong tool, dùng tab Global Configuration hoặc Export/Import backup.</p>
-              <div class="local-defaults-meta">
-                <span id="localDefaultsStatus">Chưa quét</span>
-                <span class="meta-sep">·</span>
-                <span id="localDefaultsFiles">0 files</span>
-              </div>
-              <div class="action-bar">
-                <button class="btn secondary" id="btnScanLocal">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                  Quét từ Source
-                </button>
-                <button class="btn success" id="btnApplyLocal">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                  Apply Local vào Source
-                </button>
+          <div class="panel-card backup-panel">
+            <div class="panel-card-header">
+              <div>
+                <h2>Sao lưu &amp; khôi phục</h2>
+                <p class="panel-card-desc">Export/Import config vào <strong>source</strong> — file có thể chứa password, <strong>không commit</strong></p>
               </div>
             </div>
 
@@ -178,15 +193,39 @@
               </div>
             </div>
 
-            <div class="action-bar backup-actions">
-              <button class="btn primary" id="btnExportConfig">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Export Backup
-              </button>
-              <button class="btn secondary" id="btnImportConfig">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                Chọn file backup...
-              </button>
+            <div class="backup-section local-defaults-section">
+              <h3>Local mặc định</h3>
+              <p class="section-desc">Quét snapshot từ source (BE: appsettings, launchSettings, ocelot · FE: env.js). <strong>Apply Local</strong> khôi phục snapshot đã quét — muốn áp config đã chỉnh trong tool, dùng tab Cấu hình chung hoặc Export/Import.</p>
+              <div class="local-defaults-meta">
+                <span id="localDefaultsStatus">Chưa quét</span>
+                <span class="meta-sep">·</span>
+                <span id="localDefaultsFiles">0 files</span>
+              </div>
+              <div class="action-bar">
+                <button class="btn secondary" id="btnScanLocal">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  Quét từ Source
+                </button>
+                <button class="btn success" id="btnApplyLocal">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  Apply Local
+                </button>
+              </div>
+            </div>
+
+            <div class="backup-section">
+              <h3>Export / Import</h3>
+              <p class="section-desc">Backup toàn bộ config platform hiện tại hoặc khôi phục từ file JSON.</p>
+              <div class="action-bar backup-actions">
+                <button class="btn primary" id="btnExportConfig">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Export Backup
+                </button>
+                <button class="btn secondary" id="btnImportConfig">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Chọn file Import...
+                </button>
+              </div>
             </div>
 
             <div class="import-preview hidden" id="importPreview">
@@ -202,7 +241,7 @@
               </div>
             </div>
 
-            <div class="backup-recent">
+            <div class="backup-section backup-recent">
               <h3>Backup gần đây</h3>
               <p class="backup-folder" id="backupFolderPath"></p>
               <div class="recent-list" id="recentBackupList">
@@ -226,7 +265,7 @@
               </div>
             </div>
             <div class="console-header-actions">
-              <label class="console-mode-toggle" title="Bật: mở cửa sổ CMD ngoài (log KHÔNG hiện ở khung dưới). Tắt: log hiện trong tool.">
+              <label class="console-mode-toggle" title="Bật: mở cửa sổ CMD mirror song song — log vẫn hiện trong tool. Tắt: chỉ log trong tool.">
                 <input type="checkbox" id="chkShowConsole" />
                 <span>Mở CMD riêng</span>
               </label>
@@ -244,22 +283,52 @@
   <div class="modal-overlay hidden" id="settingsModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h2 id="modalTitle">Service Settings</h2>
+        <h2 id="modalTitle">Cấu hình service</h2>
         <button class="modal-close" id="modalClose">×</button>
       </div>
       <div class="modal-body">
-        <p class="panel-sub" id="modalPaths"></p>
+        <div class="modal-meta">
+          <div class="modal-meta-row">
+            <span class="modal-meta-label">Loại</span>
+            <span class="modal-meta-value" id="modalTypeBadge">BE</span>
+          </div>
+          <div class="modal-meta-row">
+            <span class="modal-meta-label">Config</span>
+            <span class="modal-meta-value modal-path" id="modalConfigPath">—</span>
+          </div>
+          <div class="modal-meta-row">
+            <span class="modal-meta-label">Project</span>
+            <span class="modal-meta-value modal-path" id="modalProjectPath">—</span>
+          </div>
+        </div>
         <div id="modalBeConfig">
-          <div class="form-grid">
-            <label><span>Scheme</span><select id="modalScheme"><option value="https">https</option><option value="http">http</option></select></label>
-            <label><span>Host</span><input type="text" id="modalHost" /></label>
-            <label><span>Port</span><input type="text" id="modalPort" /></label>
-            <label class="full-width"><span>Connection String</span><textarea id="modalConnectionString" rows="3"></textarea></label>
+          <div class="form-section">
+            <h3 class="form-section-title">URL service</h3>
+            <div class="form-grid form-grid-3">
+              <label><span>Scheme</span><select id="modalScheme"><option value="https">https</option><option value="http">http</option></select></label>
+              <label><span>Host</span><input type="text" id="modalHost" placeholder="localhost" /></label>
+              <label><span>Port</span><input type="text" id="modalPort" placeholder="44325" /></label>
+            </div>
+          </div>
+          <div class="form-section">
+            <h3 class="form-section-title">Database</h3>
+            <label class="full-width"><span>Connection string</span><textarea id="modalConnectionString" rows="3" placeholder="Server=..."></textarea></label>
           </div>
         </div>
         <div id="modalFeConfig" class="hidden">
-          <div id="modalEnvContainer"></div>
-          <button class="btn ghost small" id="modalAddEnv">+ Thêm biến</button>
+          <div class="form-section">
+            <h3 class="form-section-title">Biến <code>env.js</code></h3>
+            <p class="section-desc fe-bindings-hint hidden" id="modalFeBindingsHint"></p>
+            <div class="env-editor">
+              <div class="env-table-header">
+                <span>Key</span>
+                <span>Value</span>
+                <span></span>
+              </div>
+              <div id="modalEnvContainer"></div>
+            </div>
+            <button class="btn ghost small" id="modalAddEnv">+ Thêm biến</button>
+          </div>
         </div>
       </div>
       <div class="modal-footer">

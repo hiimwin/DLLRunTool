@@ -45,6 +45,11 @@
     globalSubtitle: $("globalSubtitle"),
     globalBeConfig: $("globalBeConfig"),
     globalFeConfig: $("globalFeConfig"),
+    globalFeBindingsHint: $("globalFeBindingsHint"),
+    globalScopeBadge: $("globalScopeBadge"),
+    contextBar: $("contextBar"),
+    contextBarHint: $("contextBarHint"),
+    dashboardDesc: $("dashboardDesc"),
     globalScheme: $("globalScheme"),
     globalHost: $("globalHost"),
     globalConnectionString: $("globalConnectionString"),
@@ -66,7 +71,10 @@
     themeToggle: $("themeToggle"),
     settingsModal: $("settingsModal"),
     modalTitle: $("modalTitle"),
-    modalPaths: $("modalPaths"),
+    modalTypeBadge: $("modalTypeBadge"),
+    modalConfigPath: $("modalConfigPath"),
+    modalProjectPath: $("modalProjectPath"),
+    modalFeBindingsHint: $("modalFeBindingsHint"),
     modalBeConfig: $("modalBeConfig"),
     modalFeConfig: $("modalFeConfig"),
     modalScheme: $("modalScheme"),
@@ -431,8 +439,8 @@
     const hint = document.createElement("div");
     hint.className = "log-line info log-filter-empty";
     hint.textContent = cmdMode
-      ? `Chưa có log cho ${name} trong tool. Đang bật "Mở CMD riêng" — xem log trong cửa sổ CMD (Alt+Tab), hoặc tắt checkbox đó rồi STOP + RUN lại.`
-      : `Chưa có log cho ${name} trong buffer. Nếu service đã chạy trước khi lọc, hãy STOP rồi RUN lại từ tool để stream log.`;
+      ? `Chưa có log cho ${name} trong buffer. Log vẫn stream vào Console Log khi bật CMD riêng — cửa sổ mirror mở ngay (không cần RUN lại).`
+      : `Chưa có log cho ${name} trong buffer. STOP rồi RUN lại từ tool để stream log.`;
     return hint;
   }
 
@@ -487,6 +495,44 @@
     }
   }
 
+  function updateNavContext() {
+    const showCategory = state.view === "dashboard" || state.view === "global";
+    const isFe = state.category === "FE";
+
+    if (els.contextBar) {
+      els.contextBar.classList.toggle("hidden", !showCategory);
+    }
+
+    if (els.contextBarHint) {
+      if (!showCategory) {
+        els.contextBarHint.textContent = "";
+      } else if (state.view === "dashboard") {
+        els.contextBarHint.textContent = isFe
+          ? "Danh sách Front-End — npm start / env.js"
+          : "Danh sách Back-End — dotnet run / appsettings";
+      } else {
+        els.contextBarHint.textContent = isFe
+          ? "Áp dụng env.js cho mọi FE trong platform"
+          : "Áp dụng host + connection string cho mọi BE";
+      }
+    }
+
+    if (els.dashboardDesc) {
+      els.dashboardDesc.textContent = isFe
+        ? "Quản lý chạy / dừng / build các service Front-End"
+        : "Quản lý chạy / dừng / build các service Back-End";
+    }
+
+    if (els.globalScopeBadge) {
+      els.globalScopeBadge.textContent = isFe ? "Front-End" : "Back-End";
+      els.globalScopeBadge.classList.toggle("fe", isFe);
+    }
+
+    if (els.consoleSection) {
+      els.consoleSection.classList.toggle("hidden", state.view !== "dashboard");
+    }
+  }
+
   function switchView(view) {
     state.view = view;
     document.querySelectorAll(".view-tab").forEach((t) => {
@@ -499,6 +545,7 @@
     if (view === "global") loadGlobalConfig();
     if (view === "backup") loadBackupPreview();
     if (view === "workspace") loadWorkspacePaths();
+    updateNavContext();
   }
 
   function loadWorkspacePaths() {
@@ -643,36 +690,60 @@
     Bridge.send("loadGlobalConfig", { platformId: state.platformId, category: state.category });
   }
 
-  function renderGlobalConfig(config) {
+  function renderGlobalConfig(payload) {
+    const config = payload.config || payload;
     const isFe = state.category === "FE";
     els.globalBeConfig.classList.toggle("hidden", isFe);
     els.globalFeConfig.classList.toggle("hidden", !isFe);
     els.globalSubtitle.textContent = isFe
-      ? "Các biến env.js sẽ được ghi vào tất cả Front-End services"
+      ? "Biến env.js — tự lấy key từ env.prod.js; api_url/auth_url/base_url gợi ý từ URL service BE/FE trong danh sách"
       : "SelfUrl/host → appsettings.json; connection string → appsettings.secrets.json (không commit)";
 
     if (isFe) {
-      renderEnvContainer(els.globalEnvContainer, config.envVars || {
-        base_url: "", auth_url: "", api_url: "", chat_bot_url: ""
-      });
+      renderEnvContainer(els.globalEnvContainer, config.envVars || {});
+      renderFeBindingsHint(payload.feBindings || [], els.globalFeBindingsHint);
     } else {
+      if (els.globalFeBindingsHint) els.globalFeBindingsHint.classList.add("hidden");
       els.globalScheme.value = config.scheme || "https";
       els.globalHost.value = config.host || "localhost";
       els.globalConnectionString.value = config.connectionString || "";
     }
   }
 
+  function renderFeBindingsHint(bindings, target = els.globalFeBindingsHint) {
+    if (!target) return;
+    if (!bindings || bindings.length === 0) {
+      target.classList.add("hidden");
+      target.textContent = "";
+      return;
+    }
+
+    const parts = bindings.map((b) => {
+      const src = b.sourceService ? ` ← ${b.sourceService}` : "";
+      return `${b.envKey} = ${b.value}${src}`;
+    });
+    target.textContent = `Gợi ý động: ${parts.join(" · ")} (chỉ điền khi giá trị env đang trống)`;
+    target.classList.remove("hidden");
+  }
+
   function openModal(detail) {
     state.modalDetail = detail;
     state.modalServiceId = detail.id;
     els.modalTitle.textContent = detail.name;
-    els.modalPaths.textContent = `${detail.configPath || ""} · ${detail.projectPath || ""}`;
     const isFe = detail.type === "FE";
+    if (els.modalTypeBadge) {
+      els.modalTypeBadge.textContent = isFe ? "Front-End" : "Back-End";
+      els.modalTypeBadge.classList.toggle("fe", isFe);
+    }
+    if (els.modalConfigPath) els.modalConfigPath.textContent = detail.configPath || "—";
+    if (els.modalProjectPath) els.modalProjectPath.textContent = detail.projectPath || "—";
     els.modalBeConfig.classList.toggle("hidden", isFe);
     els.modalFeConfig.classList.toggle("hidden", !isFe);
     if (isFe) {
       renderEnvContainer(els.modalEnvContainer, detail.envVars || {});
+      renderFeBindingsHint(detail.feBindings || [], els.modalFeBindingsHint);
     } else {
+      if (els.modalFeBindingsHint) els.modalFeBindingsHint.classList.add("hidden");
       els.modalScheme.value = detail.scheme || "https";
       els.modalHost.value = detail.host || "localhost";
       els.modalPort.value = detail.port || "";
@@ -829,6 +900,7 @@
       document.querySelectorAll(".category-tab").forEach((t) => t.classList.remove("active"));
       tab.classList.add("active");
       state.category = tab.dataset.category;
+      updateNavContext();
       renderDashboard();
       if (state.view === "global") loadGlobalConfig();
     });
@@ -864,7 +936,7 @@
     if (!els.consoleModeHint) return;
     if (showExternal) {
       els.consoleModeHint.textContent =
-        "Đang bật CMD riêng: log của service nằm trong cửa sổ CMD bên ngoài (Alt+Tab), không hiện ở khung này. Tắt \"Mở CMD riêng\" để xem log trong tool.";
+        "CMD riêng: log vẫn hiện ở khung này; thêm cửa sổ PowerShell mirror (Alt+Tab). Bật/tắt áp dụng ngay — không cần RUN lại.";
       els.consoleModeHint.classList.remove("hidden");
     } else {
       els.consoleModeHint.textContent = "";
@@ -1021,6 +1093,7 @@
     renderPlatforms();
     applyTheme();
     initConsoleResize();
+    updateNavContext();
   });
 
   Bridge.on("updateAvailable", (info) => {
@@ -1043,9 +1116,7 @@
 
   Bridge.on("serviceDetail", (detail) => openModal(detail));
 
-  Bridge.on("globalConfig", (payload) => {
-    if (payload.config) renderGlobalConfig(payload.config);
-  });
+  Bridge.on("globalConfig", (payload) => renderGlobalConfig(payload));
 
   Bridge.on("backupPreview", renderBackupPreview);
 
