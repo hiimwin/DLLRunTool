@@ -5,7 +5,7 @@
 param(
     [string]$Version = "1.0.0",
     [string]$Tag = "v1",
-    [string]$Notes = "Win_Trung Microservices Control Panel — phien ban dau tien (zip khong lo URL update, paths rong, VI/EN)."
+    [string]$Notes = "Win_Trung Microservices Control Panel - phien ban dau tien (zip khong lo URL update, paths rong, VI/EN)."
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,15 +33,25 @@ if ($LASTEXITCODE -ne 0) {
 
 $oldTags = @("v1.2.3", "v1.2.2", "v1.2.1", "v1.2.0", "v1.1.0")
 foreach ($t in $oldTags) {
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "SilentlyContinue"
     & $gh release view $t --repo $repo 2>$null | Out-Null
-    if ($LASTEXITCODE -eq 0) {
+    $exists = ($LASTEXITCODE -eq 0)
+    $ErrorActionPreference = $prevEap
+    if ($exists) {
         Write-Host "==> Delete release $t" -ForegroundColor Yellow
         & $gh release delete $t --repo $repo --yes --cleanup-tag
+        if ($LASTEXITCODE -ne 0) { throw "Failed to delete release $t" }
     }
 }
 
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = "SilentlyContinue"
 & $gh release view $Tag --repo $repo 2>$null | Out-Null
-if ($LASTEXITCODE -eq 0) {
+$tagExists = ($LASTEXITCODE -eq 0)
+$ErrorActionPreference = $prevEap
+
+if ($tagExists) {
     Write-Host "==> Replace zip on existing $Tag" -ForegroundColor Cyan
     & $gh release upload $Tag $zip --repo $repo --clobber
     & $gh release edit $Tag --repo $repo --title $Tag --notes $Notes
