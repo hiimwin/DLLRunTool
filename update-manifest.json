@@ -2,5 +2,5 @@
     "version": "1.2.3",
     "releasedAt": "2026-06-20",
     "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.3/Win_Trung-MicroservicesControlPanel.zip",
-    "releaseNotes": "UI tab/form chuẩn; FE config động từ BE URLs; CMD riêng log mirror không cần restart; 22 service Loyalty nhóm HttpApi+Job"
+    "releaseNotes": "UI chuẩn; FE config động; CMD riêng log mirror; chuyển ngôn ngữ VI/EN; 22 service Loyalty"
 }

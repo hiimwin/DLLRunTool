@@ -1,4 +1,6 @@
 (() => {
+  const t = (key, params) => window.I18n.t(key, params);
+
   const state = {
     platformId: "loyalty",
     platforms: [],
@@ -14,7 +16,9 @@
     logFilterServiceId: "",
     logHistory: [],
     appVersion: "",
-    updateInfo: null
+    updateInfo: null,
+    lastBackupPreview: null,
+    lastGlobalConfig: null
   };
 
   const $ = (id) => document.getElementById(id);
@@ -69,6 +73,7 @@
     consoleResizeHandle: $("consoleResizeHandle"),
     consoleModeHint: $("consoleModeHint"),
     themeToggle: $("themeToggle"),
+    langToggle: $("langToggle"),
     settingsModal: $("settingsModal"),
     modalTitle: $("modalTitle"),
     modalTypeBadge: $("modalTypeBadge"),
@@ -109,6 +114,20 @@
     localStorage.setItem("mcp-theme", state.theme);
   }
 
+  function refreshI18nDynamic() {
+    I18n.applyDom();
+    updateNavContext();
+    if (state.view === "backup" && state.lastBackupPreview) renderBackupPreview(state.lastBackupPreview);
+    if (state.view === "global" && state.lastGlobalConfig) renderGlobalConfig(state.lastGlobalConfig);
+    if (state.workspace) renderWorkspaceBanner(state.workspace);
+    updateLogServiceFilter();
+    updateConsoleModeHint(!!(els.chkShowConsole && els.chkShowConsole.checked));
+    if (state.updateInfo?.isUpdateAvailable) showUpdateBanner(state.updateInfo);
+    state.dashboardSig = "";
+    renderDashboard();
+    renderConsoleLogs();
+  }
+
   function showUpdateBanner(info) {
     if (!els.updateBanner || !info?.isUpdateAvailable) return;
 
@@ -116,14 +135,16 @@
     if (dismissed && dismissed === info.latestVersion) return;
 
     state.updateInfo = info;
-    const notes = info.releaseNotes ? ` — ${info.releaseNotes}` : "";
     if (els.updateBannerMessage) {
-      els.updateBannerMessage.textContent =
-        `v${info.currentVersion} → v${info.latestVersion}${notes}. Nhấn Cập nhật ngay để tự tải, áp dụng và khởi động lại.`;
+      els.updateBannerMessage.textContent = t("update.message", {
+        current: info.currentVersion,
+        latest: info.latestVersion,
+        notes: info.releaseNotes ? ` — ${info.releaseNotes}` : ""
+      });
     }
     if (els.btnDownloadUpdate) {
       els.btnDownloadUpdate.disabled = !info.downloadUrl;
-      els.btnDownloadUpdate.title = info.downloadUrl ? "" : "Chưa có link tải trong manifest";
+      els.btnDownloadUpdate.title = info.downloadUrl ? "" : t("update.noUrl");
     }
     els.updateBanner.classList.remove("hidden");
   }
@@ -156,35 +177,36 @@
 
   function renderRunStopButton(svc) {
     if (svc.isStarting) {
-      return `<button class="row-btn success is-busy" disabled title="Đang khởi động...">
+      return `<button class="row-btn success is-busy" disabled title="${escapeAttr(t("btn.startingTitle"))}">
         <svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-        Starting
+        ${escapeHtml(t("btn.starting"))}
       </button>`;
     }
     if (svc.isRunning) {
       return `<button class="row-btn danger" data-action="stop" data-id="${escapeAttr(svc.id)}">
         <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
-        Stop
+        ${escapeHtml(t("btn.stop"))}
       </button>`;
     }
     const busy = isServiceBusy(svc) ? " disabled" : "";
     return `<button class="row-btn success${busy ? " is-busy" : ""}" data-action="run" data-id="${escapeAttr(svc.id)}"${busy}>
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-      Run
+      ${escapeHtml(t("btn.run"))}
     </button>`;
   }
 
   function renderBuildButton(svc) {
+    const label = escapeHtml(t("btn.build"));
     if (svc.isExe) {
       return `<span class="row-btn row-btn-spacer secondary" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-        Build
+        ${label}
       </span>`;
     }
     const busy = isServiceBusy(svc);
-    return `<button class="row-btn secondary${busy ? " is-busy" : ""}" data-action="build" data-id="${escapeAttr(svc.id)}" title="Build"${busy ? " disabled" : ""}>
+    return `<button class="row-btn secondary${busy ? " is-busy" : ""}" data-action="build" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.build"))}"${busy ? " disabled" : ""}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-      Build
+      ${label}
     </button>`;
   }
 
@@ -228,7 +250,7 @@
     els.dashboardList.innerHTML = "";
 
     if (list.length === 0) {
-      els.dashboardList.innerHTML = `<div class="empty-dashboard">Không có service nào trong nhóm này.</div>`;
+      els.dashboardList.innerHTML = `<div class="empty-dashboard">${escapeHtml(t("dashboard.empty"))}</div>`;
       return;
     }
 
@@ -241,7 +263,7 @@
         <span class="status-led${svc.isRunning ? " running" : ""}${svc.isStarting && !svc.isRunning ? " starting" : ""}"></span>
         <div class="service-row-info">
           <div class="service-row-name">${escapeHtml(displayName)}</div>
-          <div class="service-row-sub">${escapeHtml(svc.name)}${svc.url ? " · " + escapeHtml(svc.url) : ""}${svc.isStarting ? " · Đang khởi động…" : ""}</div>
+          <div class="service-row-sub">${escapeHtml(svc.name)}${svc.url ? " · " + escapeHtml(svc.url) : ""}${svc.isStarting ? " · " + escapeHtml(t("dashboard.starting")) : ""}</div>
           <div class="build-progress hidden" data-build-progress="${escapeAttr(svc.id)}">
             <div class="build-progress-track">
               <div class="build-progress-fill"></div>
@@ -252,15 +274,15 @@
         <div class="service-row-actions">
           ${renderBuildButton(svc)}
           ${renderRunStopButton(svc)}
-          <button class="row-btn secondary${isServiceBusy(svc) ? " is-busy" : ""}" data-action="restart" data-id="${escapeAttr(svc.id)}" title="Restart"${isServiceBusy(svc) ? " disabled" : ""}>
+          <button class="row-btn secondary${isServiceBusy(svc) ? " is-busy" : ""}" data-action="restart" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.restart"))}"${isServiceBusy(svc) ? " disabled" : ""}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            Restart
+            ${escapeHtml(t("btn.restart"))}
           </button>
-          <button class="row-btn secondary" data-action="logs" data-id="${escapeAttr(svc.id)}" title="Xem log service này">
+          <button class="row-btn secondary" data-action="logs" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("log.viewService"))}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-            Log
+            ${escapeHtml(t("btn.log"))}
           </button>
-          <button class="row-btn icon-only lock-btn${svc.isLocked ? " locked" : ""}" data-action="lock" data-id="${escapeAttr(svc.id)}" title="${svc.isLocked ? "Đã khóa — không bị Stop All / thoát tool dừng" : "Khóa — giữ chạy khi Stop All hoặc thoát tool"}">
+          <button class="row-btn icon-only lock-btn${svc.isLocked ? " locked" : ""}" data-action="lock" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(svc.isLocked ? t("lock.locked") : t("lock.unlocked"))}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               ${svc.isLocked
                 ? `<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>`
@@ -271,7 +293,7 @@
             ? `<span class="row-btn row-btn-spacer icon-only" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
               </span>`
-            : `<button class="row-btn icon-only" data-action="settings" data-id="${escapeAttr(svc.id)}" title="Cấu hình">
+            : `<button class="row-btn icon-only" data-action="settings" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.settings"))}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
               </button>`}
         </div>
@@ -296,7 +318,7 @@
       const sub = row.querySelector(".service-row-sub");
       if (sub) {
         const base = `${svc.name}${svc.url ? " · " + svc.url : ""}`;
-        sub.textContent = svc.isStarting ? `${base} · Đang khởi động…` : base;
+        sub.textContent = svc.isStarting ? `${base} · ${t("dashboard.starting")}` : base;
       }
 
       const actions = row.querySelector(".service-row-actions");
@@ -314,9 +336,7 @@
       const lockBtn = actions?.querySelector('[data-action="lock"]');
       if (lockBtn) {
         lockBtn.classList.toggle("locked", !!svc.isLocked);
-        lockBtn.title = svc.isLocked
-          ? "Đã khóa — không bị Stop All / thoát tool dừng"
-          : "Khóa — giữ chạy khi Stop All hoặc thoát tool";
+        lockBtn.title = svc.isLocked ? t("lock.locked") : t("lock.unlocked");
         const svg = lockBtn.querySelector("svg");
         if (svg) {
           svg.innerHTML = svc.isLocked
@@ -346,14 +366,14 @@
       case "run":
         setLogFilterValue(serviceId, findServiceName(serviceId));
         setLocalServiceFlags(serviceId, { isStarting: true });
-        setRunProgress({ serviceId, active: true, label: "Đang khởi động..." });
+        setRunProgress({ serviceId, active: true, label: t("run.starting") });
         Bridge.send("run", payload);
         break;
       case "stop": Bridge.send("stop", payload); break;
       case "build": Bridge.send("build", payload); break;
       case "restart":
         setLocalServiceFlags(serviceId, { isStarting: true });
-        setRunProgress({ serviceId, active: true, label: "Đang restart..." });
+        setRunProgress({ serviceId, active: true, label: t("run.restarting") });
         Bridge.send("restart", payload);
         break;
       case "settings":
@@ -366,7 +386,7 @@
         appendLog({
           serviceId,
           level: "info",
-          message: `Đang lọc log: ${name}`
+          message: t("console.filterLog", { name })
         });
         break;
       }
@@ -385,7 +405,7 @@
   function setLogFilterValue(serviceId, label) {
     state.logFilterServiceId = serviceId || "";
     if (els.logFilterLabel) {
-      els.logFilterLabel.textContent = serviceId ? label : "Tất cả service";
+      els.logFilterLabel.textContent = serviceId ? label : t("console.allServices");
     }
     if (els.logFilterMenu) {
       els.logFilterMenu.querySelectorAll(".log-filter-item").forEach((item) => {
@@ -439,8 +459,8 @@
     const hint = document.createElement("div");
     hint.className = "log-line info log-filter-empty";
     hint.textContent = cmdMode
-      ? `Chưa có log cho ${name} trong buffer. Log vẫn stream vào Console Log khi bật CMD riêng — cửa sổ mirror mở ngay (không cần RUN lại).`
-      : `Chưa có log cho ${name} trong buffer. STOP rồi RUN lại từ tool để stream log.`;
+      ? t("console.logEmptyCmd", { name })
+      : t("console.logEmpty", { name });
     return hint;
   }
 
@@ -474,7 +494,7 @@
     const all = [...(state.services.backEnd || []), ...(state.services.frontEnd || [])];
     const current = state.logFilterServiceId || "";
     els.logFilterMenu.innerHTML =
-      `<button type="button" class="log-filter-item${current === "" ? " active" : ""}" data-id="">Tất cả service</button>` +
+      `<button type="button" class="log-filter-item${current === "" ? " active" : ""}" data-id="">${escapeHtml(t("console.allServices"))}</button>` +
       all.map((s) =>
         `<button type="button" class="log-filter-item${current === s.id ? " active" : ""}" data-id="${escapeAttr(s.id)}">${escapeHtml(s.name)}</button>`
       ).join("");
@@ -483,7 +503,7 @@
       btn.onclick = (e) => {
         e.stopPropagation();
         const id = btn.dataset.id || "";
-        setLogFilterValue(id, id ? btn.textContent : "Tất cả service");
+        setLogFilterValue(id, id ? btn.textContent : t("console.allServices"));
         closeLogFilterMenu();
       };
     });
@@ -491,7 +511,7 @@
     if (current && all.some((s) => s.id === current)) {
       setLogFilterValue(current, findServiceName(current));
     } else if (!current) {
-      setLogFilterValue("", "Tất cả service");
+      setLogFilterValue("", t("console.allServices"));
     }
   }
 
@@ -507,24 +527,18 @@
       if (!showCategory) {
         els.contextBarHint.textContent = "";
       } else if (state.view === "dashboard") {
-        els.contextBarHint.textContent = isFe
-          ? "Danh sách Front-End — npm start / env.js"
-          : "Danh sách Back-End — dotnet run / appsettings";
+        els.contextBarHint.textContent = isFe ? t("hint.dashboardFe") : t("hint.dashboardBe");
       } else {
-        els.contextBarHint.textContent = isFe
-          ? "Áp dụng env.js cho mọi FE trong platform"
-          : "Áp dụng host + connection string cho mọi BE";
+        els.contextBarHint.textContent = isFe ? t("hint.globalFe") : t("hint.globalBe");
       }
     }
 
     if (els.dashboardDesc) {
-      els.dashboardDesc.textContent = isFe
-        ? "Quản lý chạy / dừng / build các service Front-End"
-        : "Quản lý chạy / dừng / build các service Back-End";
+      els.dashboardDesc.textContent = isFe ? t("dashboard.descFe") : t("dashboard.descBe");
     }
 
     if (els.globalScopeBadge) {
-      els.globalScopeBadge.textContent = isFe ? "Front-End" : "Back-End";
+      els.globalScopeBadge.textContent = isFe ? t("category.fe") : t("category.be");
       els.globalScopeBadge.classList.toggle("fe", isFe);
     }
 
@@ -564,8 +578,7 @@
       return;
     }
 
-    els.workspaceBannerText.textContent =
-      `Chưa cấu hình workspace (${issues.length} mục) — cần thiết trước khi Run/Build trên máy này.`;
+    els.workspaceBannerText.textContent = t("workspace.banner", { count: issues.length });
     els.workspaceBanner.classList.remove("hidden");
   }
 
@@ -574,7 +587,7 @@
     renderWorkspaceBanner(payload);
 
     els.workspacePathsFile.textContent = payload.pathsFile
-      ? `File cấu hình: ${payload.pathsFile}`
+      ? t("workspace.configFile", { path: payload.pathsFile })
       : "";
 
     const paths = payload.paths || {};
@@ -593,8 +606,8 @@
           ${issue ? `<span class="workspace-path-error">${escapeHtml(issue.message)}</span>` : ""}
         </div>
         <div class="workspace-path-input">
-          <input type="text" id="ws-${escapeAttr(def.key)}" data-key="${escapeAttr(def.key)}" value="${escapeAttr(value)}" placeholder="Chọn hoặc dán đường dẫn..." />
-          <button class="btn secondary small btn-browse-ws" data-key="${escapeAttr(def.key)}">Browse...</button>
+          <input type="text" id="ws-${escapeAttr(def.key)}" data-key="${escapeAttr(def.key)}" value="${escapeAttr(value)}" placeholder="${escapeAttr(t("workspace.pathPlaceholder"))}" />
+          <button class="btn secondary small btn-browse-ws" data-key="${escapeAttr(def.key)}">${escapeHtml(t("workspace.browse"))}</button>
         </div>
       `;
       els.workspacePathList.appendChild(row);
@@ -627,24 +640,25 @@
   }
 
   function renderBackupPreview(payload) {
+    state.lastBackupPreview = payload;
     els.backupPlatformName.textContent = payload.platformName || "—";
     els.backupBeCount.textContent = payload.backEndCount ?? 0;
     els.backupFeCount.textContent = payload.frontEndCount ?? 0;
     els.backupConfigCount.textContent = payload.configFileCount ?? 0;
-    els.backupFolderPath.textContent = payload.backupsFolder ? `Thư mục backup: ${payload.backupsFolder}` : "";
+    els.backupFolderPath.textContent = payload.backupsFolder ? t("backup.folder", { path: payload.backupsFolder }) : "";
 
     if (payload.hasLocalDefaults) {
-      els.localDefaultsStatus.textContent = `Đã quét: ${payload.localDefaultsScannedAt || "—"}`;
-      els.localDefaultsFiles.textContent = `${payload.localDefaultsFileCount || 0} files`;
+      els.localDefaultsStatus.textContent = t("backup.scanned", { date: payload.localDefaultsScannedAt || "—" });
+      els.localDefaultsFiles.textContent = t("backup.filesCount", { count: payload.localDefaultsFileCount || 0 });
     } else {
-      els.localDefaultsStatus.textContent = "Chưa quét — sẽ tự quét lần đầu mở tool";
-      els.localDefaultsFiles.textContent = "0 files";
+      els.localDefaultsStatus.textContent = t("backup.notScanned");
+      els.localDefaultsFiles.textContent = t("backup.filesCount", { count: 0 });
     }
 
     const recent = payload.recentBackups || [];
     els.recentBackupList.innerHTML = "";
     if (recent.length === 0) {
-      els.recentBackupList.innerHTML = `<div class="empty-dashboard">Chưa có backup nào trong thư mục backups.</div>`;
+      els.recentBackupList.innerHTML = `<div class="empty-dashboard">${escapeHtml(t("backup.emptyFolder"))}</div>`;
       return;
     }
 
@@ -657,7 +671,7 @@
           <div class="recent-item-name">${escapeHtml(item.fileName)}</div>
           <div class="recent-item-meta">${escapeHtml(item.exportedAt || "")} · ${sizeKb} KB · ${escapeHtml(item.platformId || "")}</div>
         </div>
-        <button class="btn ghost small btn-preview-recent">Xem</button>
+        <button class="btn ghost small btn-preview-recent">${escapeHtml(t("backup.preview"))}</button>
       `;
       row.querySelector(".btn-preview-recent").onclick = () => {
         Bridge.send("previewImport", { platformId: state.platformId, filePath: item.fullPath });
@@ -691,13 +705,12 @@
   }
 
   function renderGlobalConfig(payload) {
+    state.lastGlobalConfig = payload;
     const config = payload.config || payload;
     const isFe = state.category === "FE";
     els.globalBeConfig.classList.toggle("hidden", isFe);
     els.globalFeConfig.classList.toggle("hidden", !isFe);
-    els.globalSubtitle.textContent = isFe
-      ? "Biến env.js — tự lấy key từ env.prod.js; api_url/auth_url/base_url gợi ý từ URL service BE/FE trong danh sách"
-      : "SelfUrl/host → appsettings.json; connection string → appsettings.secrets.json (không commit)";
+    els.globalSubtitle.textContent = isFe ? t("global.subtitleFe") : t("global.subtitleBe");
 
     if (isFe) {
       renderEnvContainer(els.globalEnvContainer, config.envVars || {});
@@ -722,7 +735,7 @@
       const src = b.sourceService ? ` ← ${b.sourceService}` : "";
       return `${b.envKey} = ${b.value}${src}`;
     });
-    target.textContent = `Gợi ý động: ${parts.join(" · ")} (chỉ điền khi giá trị env đang trống)`;
+    target.textContent = t("global.feHint", { parts: parts.join(" · ") });
     target.classList.remove("hidden");
   }
 
@@ -732,7 +745,7 @@
     els.modalTitle.textContent = detail.name;
     const isFe = detail.type === "FE";
     if (els.modalTypeBadge) {
-      els.modalTypeBadge.textContent = isFe ? "Front-End" : "Back-End";
+      els.modalTypeBadge.textContent = isFe ? t("category.fe") : t("category.be");
       els.modalTypeBadge.classList.toggle("fe", isFe);
     }
     if (els.modalConfigPath) els.modalConfigPath.textContent = detail.configPath || "—";
@@ -772,9 +785,9 @@
     const row = document.createElement("div");
     row.className = "env-row";
     row.innerHTML = `
-      <label><span>Key</span><input type="text" class="env-key" value="${escapeAttr(key)}" /></label>
-      <label><span>Value</span><input type="text" class="env-val" value="${escapeAttr(value)}" /></label>
-      <button class="remove-env" title="Xóa">×</button>
+      <label><span>${escapeHtml(t("label.key"))}</span><input type="text" class="env-key" value="${escapeAttr(key)}" /></label>
+      <label><span>${escapeHtml(t("label.value"))}</span><input type="text" class="env-val" value="${escapeAttr(value)}" /></label>
+      <button class="remove-env" title="${escapeAttr(t("modal.remove"))}">×</button>
     `;
     row.querySelector(".remove-env").onclick = () => row.remove();
     container.appendChild(row);
@@ -853,7 +866,7 @@
         fill.classList.add("indeterminate");
         fill.style.width = "35%";
       }
-      if (text) text.textContent = payload.label || "Đang khởi động...";
+      if (text) text.textContent = payload.label || t("run.starting");
     } else {
       box.classList.remove("run-mode");
       if (fill) fill.classList.remove("indeterminate");
@@ -915,6 +928,12 @@
     applyTheme();
   };
 
+  if (els.langToggle) {
+    els.langToggle.onclick = () => I18n.toggleLang();
+  }
+  I18n.onLangChange(() => refreshI18nDynamic());
+  I18n.init();
+
   els.btnClearLog.onclick = () => {
     state.logHistory = [];
     els.consoleOutput.innerHTML = "";
@@ -924,9 +943,12 @@
   }
   els.btnStopAll.onclick = () => {
     const lockedRunning = getActiveServices().filter((s) => s.isRunning && s.isLocked);
-    let msg = "Dừng tất cả service đang chạy?";
+    let msg = t("confirm.stopAll");
     if (lockedRunning.length > 0) {
-      msg += `\n\n${lockedRunning.length} service đã khóa sẽ không bị dừng:\n${lockedRunning.map((s) => s.name).join(", ")}`;
+      msg += `\n\n${t("confirm.stopAllLocked", {
+        count: lockedRunning.length,
+        names: lockedRunning.map((s) => s.name).join(", ")
+      })}`;
     }
     if (confirm(msg)) {
       Bridge.send("stopAll");
@@ -935,8 +957,7 @@
   function updateConsoleModeHint(showExternal) {
     if (!els.consoleModeHint) return;
     if (showExternal) {
-      els.consoleModeHint.textContent =
-        "CMD riêng: log vẫn hiện ở khung này; thêm cửa sổ PowerShell mirror (Alt+Tab). Bật/tắt áp dụng ngay — không cần RUN lại.";
+      els.consoleModeHint.textContent = t("console.cmdHint");
       els.consoleModeHint.classList.remove("hidden");
     } else {
       els.consoleModeHint.textContent = "";
@@ -1059,7 +1080,7 @@
     els.btnDownloadUpdate.onclick = () => {
       if (!state.updateInfo?.downloadUrl) return;
       els.btnDownloadUpdate.disabled = true;
-      els.btnDownloadUpdate.textContent = "Đang cập nhật...";
+      els.btnDownloadUpdate.textContent = t("update.downloading");
       Bridge.send("applyUpdate", { filePath: state.updateInfo.downloadUrl });
     };
   }

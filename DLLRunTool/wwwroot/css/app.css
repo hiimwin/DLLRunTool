@@ -89,6 +89,25 @@ body {
 .rail-icon:hover { background: var(--bg-elevated); color: var(--text-primary); }
 .rail-spacer { flex: 1; }
 
+.rail-icon.lang-toggle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.rail-icon.lang-toggle .lang-label {
+  line-height: 1;
+}
+
+.rail-icon.lang-toggle.lang-en {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.rail-icon.lang-toggle:hover {
+  color: var(--text-primary);
+}
+
 [data-theme="dark"] .icon-sun { display: none; }
 [data-theme="light"] .icon-moon { display: none; }
 

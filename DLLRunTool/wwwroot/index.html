@@ -12,11 +12,14 @@
 <body data-theme="dark">
   <div class="app-shell">
     <aside class="icon-rail">
-      <div class="rail-icon active" title="Services">
+      <div class="rail-icon active" data-i18n-title="rail.services" title="Services">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       </div>
       <div class="rail-spacer"></div>
-      <button class="rail-icon" id="themeToggle" title="Dark / Light">
+      <button class="rail-icon lang-toggle" id="langToggle" type="button" data-i18n-title="rail.lang" title="Ngôn ngữ">
+        <span class="lang-label">VI</span>
+      </button>
+      <button class="rail-icon" id="themeToggle" type="button" data-i18n-title="rail.theme" title="Dark / Light">
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </button>
@@ -28,24 +31,24 @@
           <div class="title-group">
             <h1 class="page-title">Microservices</h1>
             <span class="author-badge">by Win_Trung</span>
-            <span class="version-badge" id="appVersionBadge" title="Phiên bản hiện tại"></span>
+            <span class="version-badge" id="appVersionBadge" data-i18n-title="versionBadge" title="Phiên bản hiện tại"></span>
           </div>
           <div class="platform-switcher" id="platformSwitcher"></div>
         </div>
       </header>
 
-      <nav class="view-tabs" aria-label="Điều hướng chính">
-        <button class="view-tab active" data-view="dashboard">Dịch vụ</button>
-        <button class="view-tab" data-view="workspace">Workspace</button>
-        <button class="view-tab" data-view="global">Cấu hình chung</button>
-        <button class="view-tab" data-view="backup">Sao lưu</button>
+      <nav class="view-tabs" data-i18n-aria="nav.main" aria-label="Điều hướng chính">
+        <button class="view-tab active" data-view="dashboard" data-i18n="nav.dashboard">Dịch vụ</button>
+        <button class="view-tab" data-view="workspace" data-i18n="nav.workspace">Workspace</button>
+        <button class="view-tab" data-view="global" data-i18n="nav.global">Cấu hình chung</button>
+        <button class="view-tab" data-view="backup" data-i18n="nav.backup">Sao lưu</button>
       </nav>
 
-      <div class="context-bar" id="contextBar" aria-label="Nhóm service">
-        <span class="context-bar-label">Nhóm</span>
+      <div class="context-bar" id="contextBar" data-i18n-aria="category.group" aria-label="Nhóm service">
+        <span class="context-bar-label" data-i18n="category.group">Nhóm</span>
         <nav class="category-tabs" id="categoryTabs">
-          <button class="category-tab active" data-category="BE">Back-End</button>
-          <button class="category-tab" data-category="FE">Front-End</button>
+          <button class="category-tab active" data-category="BE" data-i18n="category.be">Back-End</button>
+          <button class="category-tab" data-category="FE" data-i18n="category.fe">Front-End</button>
         </nav>
         <span class="context-bar-hint" id="contextBarHint"></span>
       </div>
@@ -54,34 +57,34 @@
         <div class="update-banner hidden" id="updateBanner">
           <div class="update-banner-icon" aria-hidden="true">⬆</div>
           <div class="update-banner-body">
-            <strong id="updateBannerTitle">Có bản cập nhật mới</strong>
+            <strong id="updateBannerTitle" data-i18n="update.title">Có bản cập nhật mới</strong>
             <p id="updateBannerMessage"></p>
           </div>
           <div class="update-banner-actions">
-            <button class="btn primary small" id="btnDownloadUpdate">Cập nhật ngay</button>
-            <button class="btn ghost small" id="btnCheckUpdate">Kiểm tra lại</button>
-            <button class="btn ghost small" id="btnDismissUpdate">Để sau</button>
+            <button class="btn primary small" id="btnDownloadUpdate" data-i18n="update.now">Cập nhật ngay</button>
+            <button class="btn ghost small" id="btnCheckUpdate" data-i18n="update.check">Kiểm tra lại</button>
+            <button class="btn ghost small" id="btnDismissUpdate" data-i18n="update.later">Để sau</button>
           </div>
         </div>
 
         <div class="workspace-banner hidden" id="workspaceBanner">
           <span id="workspaceBannerText"></span>
-          <button class="btn ghost small" id="btnOpenWorkspace">Cấu hình đường dẫn</button>
+          <button class="btn ghost small" id="btnOpenWorkspace" data-i18n="workspace.openPaths">Cấu hình đường dẫn</button>
         </div>
 
         <section class="view-panel" id="dashboardView">
           <div class="panel-card dashboard-panel">
             <div class="panel-card-header">
               <div>
-                <h2>Danh sách service</h2>
+                <h2 data-i18n="dashboard.title">Danh sách service</h2>
                 <p class="panel-card-desc" id="dashboardDesc">Quản lý chạy / dừng / build các service Back-End</p>
               </div>
-              <button class="btn ghost small" id="btnReloadServices" title="Tải lại danh sách từ services.loyalty.json / services.json (tự cập nhật khi lưu file)">
+              <button class="btn ghost small" id="btnReloadServices" data-i18n="dashboard.reload" data-i18n-title="dashboard.reloadTitle" title="Tải lại">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                 Tải lại
               </button>
             </div>
-            <p class="section-desc dashboard-hint">Thêm dòng vào <code>services.loyalty.json</code> → lưu file → danh sách tự cập nhật</p>
+            <p class="section-desc dashboard-hint" data-i18n="dashboard.hint">Thêm dòng vào services.loyalty.json → lưu file → danh sách tự cập nhật</p>
             <div class="dashboard-list" id="dashboardList"></div>
           </div>
         </section>
@@ -90,20 +93,20 @@
           <div class="panel-card workspace-panel">
             <div class="panel-card-header">
               <div>
-                <h2>Workspace Paths</h2>
-                <p class="panel-card-desc">Cấu hình thư mục gốc trên máy — mỗi máy chỉ cần làm <strong>1 lần</strong></p>
+                <h2 data-i18n="workspace.title">Workspace Paths</h2>
+                <p class="panel-card-desc" data-i18n="workspace.desc">Cấu hình thư mục gốc trên máy — mỗi máy chỉ cần làm 1 lần</p>
               </div>
             </div>
             <p class="paths-file-hint" id="workspacePathsFile"></p>
             <div class="workspace-path-list" id="workspacePathList"></div>
             <div class="workspace-missing hidden" id="workspaceMissing">
-              <h3>Service không tìm thấy thư mục</h3>
+              <h3 data-i18n="workspace.missingTitle">Service không tìm thấy thư mục</h3>
               <ul id="workspaceMissingList"></ul>
             </div>
             <div class="action-bar panel-card-footer">
               <button class="btn primary" id="btnSaveWorkspace">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
-                Lưu workspace paths
+                <span data-i18n="workspace.save">Lưu workspace paths</span>
               </button>
             </div>
           </div>
@@ -113,53 +116,44 @@
           <div class="panel-card global-panel">
             <div class="panel-card-header">
               <div>
-                <h2>Cấu hình chung</h2>
+                <h2 data-i18n="global.title">Cấu hình chung</h2>
                 <p class="panel-card-desc" id="globalSubtitle">Áp dụng cho tất cả service trong nhóm đang chọn</p>
               </div>
               <span class="scope-badge" id="globalScopeBadge">Back-End</span>
             </div>
             <div id="globalBeConfig">
               <div class="form-section">
-                <h3 class="form-section-title">Kết nối HTTP</h3>
+                <h3 class="form-section-title" data-i18n="global.http">Kết nối HTTP</h3>
                 <div class="form-grid form-grid-2">
-                  <label>
-                    <span>Scheme</span>
-                    <select id="globalScheme"><option value="https">https</option><option value="http">http</option></select>
-                  </label>
-                  <label>
-                    <span>Host</span>
-                    <input type="text" id="globalHost" placeholder="localhost" />
-                  </label>
+                  <label><span data-i18n="label.scheme">Scheme</span><select id="globalScheme"><option value="https">https</option><option value="http">http</option></select></label>
+                  <label><span data-i18n="label.host">Host</span><input type="text" id="globalHost" placeholder="localhost" /></label>
                 </div>
               </div>
               <div class="form-section">
-                <h3 class="form-section-title">Database</h3>
-                <p class="section-desc">Ghi vào <code>appsettings.secrets.json</code> (mọi service BE) — không ghi vào <code>appsettings.json</code></p>
-                <label class="full-width">
-                  <span>Connection string</span>
-                  <textarea id="globalConnectionString" rows="4" placeholder="Server=...;Database=..."></textarea>
-                </label>
+                <h3 class="form-section-title" data-i18n="global.database">Database</h3>
+                <p class="section-desc" data-i18n="global.dbHint">Ghi vào appsettings.secrets.json (mọi service BE)</p>
+                <label class="full-width"><span data-i18n="global.connString">Connection string</span><textarea id="globalConnectionString" rows="4" placeholder="Server=...;Database=..."></textarea></label>
               </div>
             </div>
             <div id="globalFeConfig" class="hidden">
               <div class="form-section">
-                <h3 class="form-section-title">Biến môi trường <code>env.js</code></h3>
+                <h3 class="form-section-title" data-i18n="global.envTitle">Biến môi trường env.js</h3>
                 <p class="section-desc fe-bindings-hint hidden" id="globalFeBindingsHint"></p>
                 <div class="env-editor">
                   <div class="env-table-header">
-                    <span>Key</span>
-                    <span>Value</span>
+                    <span data-i18n="label.key">Key</span>
+                    <span data-i18n="label.value">Value</span>
                     <span></span>
                   </div>
                   <div id="globalEnvContainer"></div>
                 </div>
-                <button class="btn ghost small" id="globalAddEnv">+ Thêm biến</button>
+                <button class="btn ghost small" id="globalAddEnv" data-i18n="global.addEnv">+ Thêm biến</button>
               </div>
             </div>
             <div class="action-bar panel-card-footer">
               <button class="btn primary" id="btnSaveGlobal">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
-                Lưu &amp; Áp dụng tất cả
+                <span data-i18n="global.save">Lưu &amp; Áp dụng tất cả</span>
               </button>
             </div>
           </div>
@@ -169,108 +163,76 @@
           <div class="panel-card backup-panel">
             <div class="panel-card-header">
               <div>
-                <h2>Sao lưu &amp; khôi phục</h2>
-                <p class="panel-card-desc">Export/Import config vào <strong>source</strong> — file có thể chứa password, <strong>không commit</strong></p>
+                <h2 data-i18n="backup.title">Sao lưu &amp; khôi phục</h2>
+                <p class="panel-card-desc" data-i18n="backup.desc">Export/Import config vào source</p>
               </div>
             </div>
-
             <div class="backup-summary" id="backupSummary">
-              <div class="summary-card">
-                <span class="summary-label">Platform</span>
-                <span class="summary-value" id="backupPlatformName">—</span>
-              </div>
-              <div class="summary-card">
-                <span class="summary-label">Back-End</span>
-                <span class="summary-value" id="backupBeCount">0</span>
-              </div>
-              <div class="summary-card">
-                <span class="summary-label">Front-End</span>
-                <span class="summary-value" id="backupFeCount">0</span>
-              </div>
-              <div class="summary-card">
-                <span class="summary-label">File config</span>
-                <span class="summary-value" id="backupConfigCount">0</span>
-              </div>
+              <div class="summary-card"><span class="summary-label" data-i18n="backup.platform">Platform</span><span class="summary-value" id="backupPlatformName">—</span></div>
+              <div class="summary-card"><span class="summary-label" data-i18n="backup.be">Back-End</span><span class="summary-value" id="backupBeCount">0</span></div>
+              <div class="summary-card"><span class="summary-label" data-i18n="backup.fe">Front-End</span><span class="summary-value" id="backupFeCount">0</span></div>
+              <div class="summary-card"><span class="summary-label" data-i18n="backup.files">File config</span><span class="summary-value" id="backupConfigCount">0</span></div>
             </div>
-
             <div class="backup-section local-defaults-section">
-              <h3>Local mặc định</h3>
-              <p class="section-desc">Quét snapshot từ source (BE: appsettings, launchSettings, ocelot · FE: env.js). <strong>Apply Local</strong> khôi phục snapshot đã quét — muốn áp config đã chỉnh trong tool, dùng tab Cấu hình chung hoặc Export/Import.</p>
+              <h3 data-i18n="backup.localTitle">Local mặc định</h3>
+              <p class="section-desc" data-i18n="backup.localDesc">Quét snapshot từ source</p>
               <div class="local-defaults-meta">
                 <span id="localDefaultsStatus">Chưa quét</span>
                 <span class="meta-sep">·</span>
                 <span id="localDefaultsFiles">0 files</span>
               </div>
               <div class="action-bar">
-                <button class="btn secondary" id="btnScanLocal">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                  Quét từ Source
-                </button>
-                <button class="btn success" id="btnApplyLocal">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                  Apply Local
-                </button>
+                <button class="btn secondary" id="btnScanLocal"><span data-i18n="backup.scan">Quét từ Source</span></button>
+                <button class="btn success" id="btnApplyLocal"><span data-i18n="backup.applyLocal">Apply Local</span></button>
               </div>
             </div>
-
             <div class="backup-section">
-              <h3>Export / Import</h3>
-              <p class="section-desc">Backup toàn bộ config platform hiện tại hoặc khôi phục từ file JSON.</p>
+              <h3 data-i18n="backup.exportTitle">Export / Import</h3>
+              <p class="section-desc" data-i18n="backup.exportDesc">Backup toàn bộ config</p>
               <div class="action-bar backup-actions">
-                <button class="btn primary" id="btnExportConfig">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  Export Backup
-                </button>
-                <button class="btn secondary" id="btnImportConfig">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  Chọn file Import...
-                </button>
+                <button class="btn primary" id="btnExportConfig"><span data-i18n="backup.export">Export Backup</span></button>
+                <button class="btn secondary" id="btnImportConfig"><span data-i18n="backup.import">Chọn file Import...</span></button>
               </div>
             </div>
-
             <div class="import-preview hidden" id="importPreview">
-              <h3>Xem trước Import</h3>
+              <h3 data-i18n="backup.previewTitle">Xem trước Import</h3>
               <p class="preview-meta" id="importPreviewMeta"></p>
               <ul class="preview-service-list" id="importPreviewList"></ul>
               <div class="action-bar">
-                <button class="btn success" id="btnApplyImport">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                  Apply vào Source
-                </button>
-                <button class="btn ghost" id="btnCancelImport">Hủy</button>
+                <button class="btn success" id="btnApplyImport"><span data-i18n="backup.applyImport">Apply vào Source</span></button>
+                <button class="btn ghost" id="btnCancelImport" data-i18n="backup.cancel">Hủy</button>
               </div>
             </div>
-
             <div class="backup-section backup-recent">
-              <h3>Backup gần đây</h3>
+              <h3 data-i18n="backup.recentTitle">Backup gần đây</h3>
               <p class="backup-folder" id="backupFolderPath"></p>
               <div class="recent-list" id="recentBackupList">
-                <div class="empty-dashboard">Chưa có backup nào.</div>
+                <div class="empty-dashboard" data-i18n="backup.empty">Chưa có backup nào.</div>
               </div>
             </div>
           </div>
         </section>
 
         <section class="console-section" id="consoleSection">
-          <div class="console-resize-handle" id="consoleResizeHandle" title="Kéo để thay đổi chiều cao log"></div>
+          <div class="console-resize-handle" id="consoleResizeHandle" data-i18n-title="console.resize" title="Resize"></div>
           <div class="console-header">
             <div class="console-header-left">
-              <span>Console Log</span>
+              <span data-i18n="console.title">Console Log</span>
               <div class="log-filter" id="logFilter">
-                <button type="button" class="log-filter-btn" id="logFilterBtn" title="Lọc log theo service">
-                  <span id="logFilterLabel">Tất cả service</span>
+                <button type="button" class="log-filter-btn" id="logFilterBtn" data-i18n-title="console.filterTitle" title="Filter">
+                  <span id="logFilterLabel" data-i18n="console.allServices">Tất cả service</span>
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
                 <div class="log-filter-menu hidden" id="logFilterMenu"></div>
               </div>
             </div>
             <div class="console-header-actions">
-              <label class="console-mode-toggle" title="Bật: mở cửa sổ CMD mirror song song — log vẫn hiện trong tool. Tắt: chỉ log trong tool.">
+              <label class="console-mode-toggle" data-i18n-title="console.cmdTitle" title="CMD">
                 <input type="checkbox" id="chkShowConsole" />
-                <span>Mở CMD riêng</span>
+                <span data-i18n="console.cmdToggle">Mở CMD riêng</span>
               </label>
-              <button class="btn ghost small" id="btnStopAll" title="Dừng service đang chạy (trừ service đã khóa)">Stop All</button>
-              <button class="btn ghost small" id="btnClearLog">Clear</button>
+              <button class="btn ghost small" id="btnStopAll" data-i18n="console.stopAll" data-i18n-title="console.stopAllTitle" title="Stop All">Stop All</button>
+              <button class="btn ghost small" id="btnClearLog" data-i18n="console.clear">Clear</button>
             </div>
           </div>
           <p class="console-mode-hint hidden" id="consoleModeHint"></p>
@@ -283,60 +245,52 @@
   <div class="modal-overlay hidden" id="settingsModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h2 id="modalTitle">Cấu hình service</h2>
+        <h2 id="modalTitle" data-i18n="modal.title">Cấu hình service</h2>
         <button class="modal-close" id="modalClose">×</button>
       </div>
       <div class="modal-body">
         <div class="modal-meta">
-          <div class="modal-meta-row">
-            <span class="modal-meta-label">Loại</span>
-            <span class="modal-meta-value" id="modalTypeBadge">BE</span>
-          </div>
-          <div class="modal-meta-row">
-            <span class="modal-meta-label">Config</span>
-            <span class="modal-meta-value modal-path" id="modalConfigPath">—</span>
-          </div>
-          <div class="modal-meta-row">
-            <span class="modal-meta-label">Project</span>
-            <span class="modal-meta-value modal-path" id="modalProjectPath">—</span>
-          </div>
+          <div class="modal-meta-row"><span class="modal-meta-label" data-i18n="modal.type">Loại</span><span class="modal-meta-value" id="modalTypeBadge">BE</span></div>
+          <div class="modal-meta-row"><span class="modal-meta-label" data-i18n="modal.config">Config</span><span class="modal-meta-value modal-path" id="modalConfigPath">—</span></div>
+          <div class="modal-meta-row"><span class="modal-meta-label" data-i18n="modal.project">Project</span><span class="modal-meta-value modal-path" id="modalProjectPath">—</span></div>
         </div>
         <div id="modalBeConfig">
           <div class="form-section">
-            <h3 class="form-section-title">URL service</h3>
+            <h3 class="form-section-title" data-i18n="modal.url">URL service</h3>
             <div class="form-grid form-grid-3">
-              <label><span>Scheme</span><select id="modalScheme"><option value="https">https</option><option value="http">http</option></select></label>
-              <label><span>Host</span><input type="text" id="modalHost" placeholder="localhost" /></label>
-              <label><span>Port</span><input type="text" id="modalPort" placeholder="44325" /></label>
+              <label><span data-i18n="label.scheme">Scheme</span><select id="modalScheme"><option value="https">https</option><option value="http">http</option></select></label>
+              <label><span data-i18n="label.host">Host</span><input type="text" id="modalHost" placeholder="localhost" /></label>
+              <label><span data-i18n="label.port">Port</span><input type="text" id="modalPort" placeholder="44325" /></label>
             </div>
           </div>
           <div class="form-section">
-            <h3 class="form-section-title">Database</h3>
-            <label class="full-width"><span>Connection string</span><textarea id="modalConnectionString" rows="3" placeholder="Server=..."></textarea></label>
+            <h3 class="form-section-title" data-i18n="global.database">Database</h3>
+            <label class="full-width"><span data-i18n="global.connString">Connection string</span><textarea id="modalConnectionString" rows="3" placeholder="Server=..."></textarea></label>
           </div>
         </div>
         <div id="modalFeConfig" class="hidden">
           <div class="form-section">
-            <h3 class="form-section-title">Biến <code>env.js</code></h3>
+            <h3 class="form-section-title" data-i18n="modal.env">Biến env.js</h3>
             <p class="section-desc fe-bindings-hint hidden" id="modalFeBindingsHint"></p>
             <div class="env-editor">
               <div class="env-table-header">
-                <span>Key</span>
-                <span>Value</span>
+                <span data-i18n="label.key">Key</span>
+                <span data-i18n="label.value">Value</span>
                 <span></span>
               </div>
               <div id="modalEnvContainer"></div>
             </div>
-            <button class="btn ghost small" id="modalAddEnv">+ Thêm biến</button>
+            <button class="btn ghost small" id="modalAddEnv" data-i18n="global.addEnv">+ Thêm biến</button>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn primary" id="modalSave">Lưu cấu hình</button>
+        <button class="btn primary" id="modalSave" data-i18n="modal.save">Lưu cấu hình</button>
       </div>
     </div>
   </div>
 
+  <script src="js/i18n.js"></script>
   <script src="js/bridge.js"></script>
   <script src="js/app.js"></script>
 </body>
