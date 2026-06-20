@@ -11,7 +11,7 @@ partial class MainForm
         MinimumSize = new Size(1100, 700);
         StartPosition = FormStartPosition.CenterScreen;
         Text = "Win_Trung - Microservices Control Panel";
-        BackColor = Color.FromArgb(32, 33, 36);
+        BackColor = Color.FromArgb(26, 27, 30);
 
         ResumeLayout(false);
     }

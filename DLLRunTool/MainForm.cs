@@ -5,15 +5,35 @@ namespace DLLRunTool;
 
 public partial class MainForm : Form
 {
-    private readonly WebView2 _webView = new() { Dock = DockStyle.Fill };
+    private readonly WebView2 _webView = new()
+    {
+        Dock = DockStyle.Fill,
+        DefaultBackgroundColor = Color.FromArgb(255, 26, 27, 30)
+    };
     private WebViewBridgeHost? _bridge;
 
     public MainForm()
     {
         InitializeComponent();
+        TrySetWindowIcon();
         Controls.Add(_webView);
+        HandleCreated += (_, _) => WindowChrome.ApplyRoundedCorners(this);
         Load += MainForm_Load;
         FormClosing += MainForm_FormClosing;
+    }
+
+    private void TrySetWindowIcon()
+    {
+        try
+        {
+            var extracted = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+            if (extracted != null)
+                Icon = extracted;
+        }
+        catch
+        {
+            // ignore
+        }
     }
 
     private async void MainForm_Load(object? sender, EventArgs e)
