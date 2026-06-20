@@ -54,6 +54,7 @@
     consoleOutput: $("consoleOutput"),
     btnClearLog: $("btnClearLog"),
     btnStopAll: $("btnStopAll"),
+    btnReloadServices: $("btnReloadServices"),
     chkShowConsole: $("chkShowConsole"),
     logFilter: $("logFilter"),
     logFilterBtn: $("logFilterBtn"),
@@ -846,6 +847,9 @@
     state.logHistory = [];
     els.consoleOutput.innerHTML = "";
   };
+  if (els.btnReloadServices) {
+    els.btnReloadServices.onclick = () => Bridge.send("reloadServices");
+  }
   els.btnStopAll.onclick = () => {
     const lockedRunning = getActiveServices().filter((s) => s.isRunning && s.isLocked);
     let msg = "Dừng tất cả service đang chạy?";
@@ -1029,6 +1033,8 @@
   Bridge.on("services", (payload) => {
     if (payload.platformId) state.platformId = payload.platformId;
     state.services = { backEnd: payload.backEnd || [], frontEnd: payload.frontEnd || [] };
+    state.dashboardSig = "";
+    state.dashboardStatusSig = "";
     renderPlatforms();
     renderDashboard();
   });

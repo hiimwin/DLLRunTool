@@ -17,6 +17,7 @@ public sealed class ServiceOrchestrator
     private readonly AsyncCommandRunner _commandRunner;
     private readonly Action<BridgeResponse> _pushToUi;
     private readonly System.Windows.Forms.Timer _statusTimer;
+    private readonly ServicesConfigWatcher _servicesConfigWatcher;
     private readonly Control? _uiOwner;
     private string _activePlatformId = "loyalty";
     private string _lastStatusSnapshot = "";
@@ -56,6 +57,11 @@ public sealed class ServiceOrchestrator
             await Task.Delay(8000).ConfigureAwait(false);
             await EnsureLocalDefaultsAsync().ConfigureAwait(false);
         });
+
+        _servicesConfigWatcher = new ServicesConfigWatcher(
+            () => RunOnUi(ReloadServicesFromDisk),
+            "services.loyalty.json",
+            "services.json");
     }
 
     private async Task EnsureLocalDefaultsAsync()
@@ -123,6 +129,9 @@ public sealed class ServiceOrchestrator
                     _activePlatformId = request.PlatformId ?? _activePlatformId;
                     PushPlatformChanged();
                     PushServicesList();
+                    break;
+                case "reloadServices":
+                    ReloadServicesFromDisk();
                     break;
                 case "loadGlobalConfig":
                     await SendGlobalConfigAsync(request.Category ?? "BE").ConfigureAwait(false);
@@ -372,6 +381,18 @@ public sealed class ServiceOrchestrator
 
         ProcessStatusCache.Invalidate();
         _lastStatusSnapshot = "";
+    }
+
+    private void ReloadServicesFromDisk()
+    {
+        ReloadAllServices();
+        var count = GetActiveServices().Count;
+        PushServicesList();
+        PushLog(new LogPayload
+        {
+            Level = "success",
+            Message = $"Đã tải lại danh sách service ({count} mục). Sửa services*.json → lưu file → tool tự cập nhật."
+        });
     }
 
     private void PushPlatformChanged()

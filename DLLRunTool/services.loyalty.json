@@ -39,6 +39,26 @@
     "IsExe": false
   },
   {
+    "Id": "loyalty-product",
+    "Name": "Product",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\product\\src\\AKC.Products.ProductService.HttpApi.Host",
+    "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\product\\src\\AKC.Products.ProductService.HttpApi.Host",
+    "DllName": "AKC.Products.ProductService.HttpApi.Host.dll",
+    "Url": "https://localhost:44361",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-segment",
+    "Name": "Segment",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\segment\\src\\AKC.Products.SegmentService.HttpApi.Host",
+    "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\segment\\src\\AKC.Products.SegmentService.HttpApi.Host",
+    "DllName": "AKC.Products.SegmentService.HttpApi.Host.dll",
+    "Url": "https://localhost:44366",
+    "IsExe": false
+  },
+  {
     "Id": "loyalty-administration",
     "Name": "Administration",
     "Type": "BE",
@@ -76,6 +96,16 @@
     "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\transaction\\src\\AKC.Products.TransactionService.HttpApi.Host",
     "DllName": "AKC.Products.TransactionService.HttpApi.Host.dll",
     "Url": "https://localhost:44368",
+    "IsExe": false
+  },
+  {
+    "Id": "loyalty-syncdata",
+    "Name": "SyncData",
+    "Type": "BE",
+    "FolderPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\sync.data\\src\\AKC.Products.SyncDataService.HttpApi.Host",
+    "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\services\\sync.data\\src\\AKC.Products.SyncDataService.HttpApi.Host",
+    "DllName": "AKC.Products.SyncDataService.HttpApi.Host.dll",
+    "Url": "https://localhost:44370",
     "IsExe": false
   },
   {
