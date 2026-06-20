@@ -2,5 +2,5 @@
     "version": "1.0.0",
     "releasedAt": "2026-06-20",
     "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1/Win_Trung-MicroservicesControlPanel.zip",
-    "releaseNotes": "Phien ban dau tien: zip khong lo URL update; README user; paths rong; VI/EN; FE config dong; log mirror CMD"
+    "releaseNotes": "Layout full co gian theo cua so; zip khong lo URL update; paths rong; VI/EN; FE config dong; log mirror CMD"
 }
