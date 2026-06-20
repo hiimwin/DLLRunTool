@@ -139,9 +139,9 @@ public static class WorkspacePathsStore
     private static Dictionary<string, string> CreateDefaults() =>
         new(StringComparer.OrdinalIgnoreCase)
         {
-            ["loyaltyRoot"] = @"D:\Codes\LoyaltyPlatform",
-            ["fptcxRoot"] = @"D:\Codes\FPTCXSuite",
-            ["redisPath"] = @"D:\Codes\Redis"
+            ["loyaltyRoot"] = "",
+            ["fptcxRoot"] = "",
+            ["redisPath"] = ""
         };
 
     private static string NormalizePath(string path)

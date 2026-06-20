@@ -30,12 +30,6 @@ internal sealed class UpdateManifest
     public string ReleasedAt { get; set; } = "";
 }
 
-internal sealed class UpdateCheckConfig
-{
-    [JsonPropertyName("manifestUrl")]
-    public string ManifestUrl { get; set; } = "";
-}
-
 public static class UpdateChecker
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
@@ -44,7 +38,7 @@ public static class UpdateChecker
     public static async Task<UpdateCheckResult?> CheckAsync(CancellationToken ct = default)
     {
         var current = AppVersionInfo.Current;
-        var manifestUrl = ResolveManifestUrl();
+        var manifestUrl = UpdateEndpointStore.GetManifestUrl();
         if (string.IsNullOrWhiteSpace(manifestUrl) || manifestUrl.Contains("REPLACE_", StringComparison.OrdinalIgnoreCase))
             return null;
 
@@ -65,24 +59,6 @@ public static class UpdateChecker
                 ReleasedAt = manifest.ReleasedAt?.Trim() ?? "",
                 IsUpdateAvailable = isNewer
             };
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static string? ResolveManifestUrl()
-    {
-        var path = Path.Combine(AppContext.BaseDirectory, "update-check.config.json");
-        if (!File.Exists(path))
-            return null;
-
-        try
-        {
-            var json = File.ReadAllText(path);
-            var config = JsonSerializer.Deserialize<UpdateCheckConfig>(json, JsonOptions);
-            return string.IsNullOrWhiteSpace(config?.ManifestUrl) ? null : config.ManifestUrl.Trim();
         }
         catch
         {

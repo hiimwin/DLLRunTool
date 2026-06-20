@@ -45,19 +45,48 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
     Write-Host "==> Version set to $Version" -ForegroundColor Cyan
 }
 
+$embedScript = Join-Path $root "scripts\embed-update-endpoint.ps1"
+if (-not (Test-Path $embedScript)) { throw "Missing $embedScript" }
+Write-Host "==> Embed obfuscated update endpoint..." -ForegroundColor Cyan
+& $embedScript
+
+if (Test-Path $outDir) {
+    Remove-Item $outDir -Recurse -Force
+}
+
 Write-Host "==> Restore & publish (Release, win-x64, self-contained) v$Version..." -ForegroundColor Cyan
 dotnet publish $project `
     -c Release `
     -r win-x64 `
     --self-contained true `
     -p:PublishReadyToRun=true `
+    -p:DebugType=None `
     -o $outDir
 
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE"
 }
 
-Copy-Item (Join-Path $root "README.md") (Join-Path $outDir "README.md") -Force
+$userReadme = Join-Path $root "README-user.md"
+if (Test-Path $userReadme) {
+    Copy-Item $userReadme (Join-Path $outDir "README.md") -Force
+}
+
+$leakFiles = @(
+    (Join-Path $outDir "update-check.config.json"),
+    (Join-Path $outDir "update-manifest.json"),
+    (Join-Path $outDir "paths.local.json"),
+    (Join-Path $outDir "DLLRunTool.pdb")
+)
+foreach ($f in $leakFiles) {
+    if (Test-Path $f) { Remove-Item $f -Force; Write-Host "==> Removed from zip output: $(Split-Path $f -Leaf)" -ForegroundColor DarkYellow }
+}
+
+$devBackups = Join-Path $outDir "backups"
+if (Test-Path $devBackups) {
+    Remove-Item $devBackups -Recurse -Force
+    Write-Host "==> Removed from zip output: backups/" -ForegroundColor DarkYellow
+}
 
 $webviewProfile = Join-Path $outDir "DLLRunTool.exe.WebView2"
 if (Test-Path $webviewProfile) {
@@ -96,7 +125,7 @@ $manifest = [ordered]@{
 $manifestJson = ($manifest | ConvertTo-Json -Depth 3)
 Set-Content -Path $manifestPath -Value $manifestJson -Encoding UTF8
 Write-Host "==> Updated $manifestPath" -ForegroundColor Cyan
-Write-Host "    Upload file này lên URL trong update-check.config.json sau mỗi release." -ForegroundColor Yellow
+Write-Host "    Push update-manifest.json len main (dev only, khong nam trong zip)." -ForegroundColor Yellow
 
 $zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
 $exe = Join-Path $outDir "DLLRunTool.exe"
