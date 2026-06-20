@@ -1,0 +1,18 @@
+bin/
+obj/
+publish/
+*.user
+*.suo
+.vs/
+*.WebView2/
+paths.local.json
+*.Backup.tmp
+
+# Runtime data — co the chua DB password / backup day du
+backups/
+defaults/
+global.*.json
+global.*.secrets.json
+service-locks.json
+run-settings.json
+backup-*.json
