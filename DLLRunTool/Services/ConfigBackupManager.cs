@@ -29,6 +29,8 @@ public static class ConfigBackupManager
             Source = source
         };
 
+        var preserveFull = string.Equals(source, "local-scan", StringComparison.OrdinalIgnoreCase);
+
         foreach (var category in new[] { "be", "fe" })
         {
             var globalPath = GlobalConfigManager.GetFilePath(platformId, category);
@@ -36,20 +38,38 @@ public static class ConfigBackupManager
                 continue;
 
             var content = await File.ReadAllTextAsync(globalPath, ct).ConfigureAwait(false);
-            var node = ConfigSecretsHelper.ParseJsonObject(content);
-            if (node != null)
+            if (preserveFull)
             {
-                ConfigSecretsHelper.RedactServiceUiConfigJson(node);
-                package.GlobalConfigs[category] = node.ToJsonString(JsonOptions);
+                var node = ConfigSecretsHelper.ParseJsonObject(content);
+                var globalSecretsPath = GlobalConfigManager.GetSecretsFilePath(platformId, category);
+                if (node != null && File.Exists(globalSecretsPath))
+                {
+                    var secretsJson = await File.ReadAllTextAsync(globalSecretsPath, ct).ConfigureAwait(false);
+                    var secretsNode = ConfigSecretsHelper.ParseJsonObject(secretsJson);
+                    var conn = secretsNode?["connectionString"]?.GetValue<string>()
+                               ?? secretsNode?["ConnectionString"]?.GetValue<string>();
+                    if (!string.IsNullOrWhiteSpace(conn))
+                        node["connectionString"] = conn;
+                    package.GlobalConfigs[category] = node.ToJsonString(JsonOptions);
+                }
+                else
+                {
+                    package.GlobalConfigs[category] = content;
+                }
             }
             else
             {
-                package.GlobalConfigs[category] = content;
+                var node = ConfigSecretsHelper.ParseJsonObject(content);
+                if (node != null)
+                {
+                    ConfigSecretsHelper.RedactServiceUiConfigJson(node);
+                    package.GlobalConfigs[category] = node.ToJsonString(JsonOptions);
+                }
+                else
+                {
+                    package.GlobalConfigs[category] = content;
+                }
             }
-
-            var globalSecretsPath = GlobalConfigManager.GetSecretsFilePath(platformId, category);
-            if (File.Exists(globalSecretsPath))
-                package.GlobalConfigs[$"{category}.secrets"] = await File.ReadAllTextAsync(globalSecretsPath, ct).ConfigureAwait(false);
         }
 
         foreach (var service in services)
@@ -85,23 +105,6 @@ public static class ConfigBackupManager
                 continue;
 
             var content = await File.ReadAllTextAsync(path, ct).ConfigureAwait(false);
-
-            if (key.Equals("appsettings.json", StringComparison.OrdinalIgnoreCase))
-            {
-                var (publicContent, secretsNode) = ConfigSecretsHelper.SplitSensitive(content);
-                entry.ConfigFiles[key] = publicContent;
-                entry.ConfigFilePaths[key] = path;
-
-                if (secretsNode != null)
-                {
-                    var secretsKey = "appsettings.secrets.json";
-                    var options = new JsonSerializerOptions { WriteIndented = true };
-                    entry.ConfigFiles[secretsKey] = secretsNode.ToJsonString(options);
-                    entry.ConfigFilePaths[secretsKey] = ConfigFileManager.ResolveSecretsPath(path);
-                }
-
-                continue;
-            }
 
             entry.ConfigFiles[key] = content;
             entry.ConfigFilePaths[key] = path;
@@ -191,12 +194,32 @@ public static class ConfigBackupManager
             if (string.IsNullOrWhiteSpace(content))
                 continue;
 
-            var path = GlobalConfigManager.GetFilePath(targetPlatformId, category);
+            string path;
+            var writeContent = content;
             if (category.EndsWith(".secrets", StringComparison.OrdinalIgnoreCase))
             {
-                path = GlobalConfigManager.GetSecretsFilePath(
-                    targetPlatformId,
-                    category.Replace(".secrets", "", StringComparison.OrdinalIgnoreCase));
+                var baseCategory = category.Replace(".secrets", "", StringComparison.OrdinalIgnoreCase);
+                path = GlobalConfigManager.GetFilePath(targetPlatformId, baseCategory);
+                if (!File.Exists(path))
+                {
+                    result.SkippedCount++;
+                    result.Messages.Add($"Bỏ qua global {category} — chưa có {Path.GetFileName(path)}.");
+                    continue;
+                }
+
+                var existingGlobal = await File.ReadAllTextAsync(path, ct).ConfigureAwait(false);
+                var node = ConfigSecretsHelper.ParseJsonObject(existingGlobal) ?? new System.Text.Json.Nodes.JsonObject();
+                var secretsNode = ConfigSecretsHelper.ParseJsonObject(content);
+                var conn = secretsNode?["connectionString"]?.GetValue<string>()
+                           ?? secretsNode?["ConnectionString"]?.GetValue<string>();
+                if (!string.IsNullOrWhiteSpace(conn))
+                    node["connectionString"] = conn;
+
+                writeContent = node.ToJsonString(JsonOptions);
+            }
+            else
+            {
+                path = GlobalConfigManager.GetFilePath(targetPlatformId, category);
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -204,7 +227,7 @@ public static class ConfigBackupManager
             if (File.Exists(path))
             {
                 var existingGlobal = await File.ReadAllTextAsync(path, ct).ConfigureAwait(false);
-                if (ConfigContentComparer.AreEqual(existingGlobal, content, Path.GetFileName(path)))
+                if (ConfigContentComparer.AreEqual(existingGlobal, writeContent, Path.GetFileName(path)))
                 {
                     result.UnchangedCount++;
                     result.AppliedCount++;
@@ -213,7 +236,7 @@ public static class ConfigBackupManager
                 }
             }
 
-            await File.WriteAllTextAsync(path, content, ct).ConfigureAwait(false);
+            await File.WriteAllTextAsync(path, writeContent, ct).ConfigureAwait(false);
             result.Messages.Add($"[Đã đổi] Global → {Path.GetFileName(path)}");
             result.AppliedCount++;
             result.ChangedCount++;
@@ -288,8 +311,20 @@ public static class ConfigBackupManager
                 }
                 else if (key.Equals("appsettings.secrets.json", StringComparison.OrdinalIgnoreCase))
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
-                    await File.WriteAllTextAsync(targetPath, content, ct).ConfigureAwait(false);
+                    var appsettingsPath = service.ResolveExpectedSourceConfigPath("appsettings.json");
+                    if (string.IsNullOrEmpty(appsettingsPath))
+                    {
+                        result.SkippedCount++;
+                        result.Messages.Add($"Bỏ qua '{entry.Name}/{key}' — không tìm thấy appsettings.json source.");
+                        continue;
+                    }
+
+                    await ConfigFileManager.MergeSecretsFileIntoAppSettingsAsync(appsettingsPath, content, ct).ConfigureAwait(false);
+                    result.AppliedCount++;
+                    result.ChangedCount++;
+                    affectedServices.Add(service);
+                    result.Messages.Add($"[Đã đổi] {entry.Name} → gộp {key} vào appsettings.json");
+                    continue;
                 }
                 else
                 {

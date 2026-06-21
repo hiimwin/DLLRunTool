@@ -88,6 +88,32 @@ if (Test-Path $devBackups) {
     Write-Host "==> Removed from zip output: backups/" -ForegroundColor DarkYellow
 }
 
+$devDefaults = Join-Path $outDir "defaults"
+if (Test-Path $devDefaults) {
+    Remove-Item $devDefaults -Recurse -Force
+    Write-Host "==> Removed from zip output: defaults/" -ForegroundColor DarkYellow
+}
+
+$secretPatterns = @(
+    "global.*.json",
+    "global.*.secrets.json",
+    "backup-*.json",
+    "appsettings.secrets.json",
+    "paths.local.json",
+    "service-locks.json",
+    "run-settings.json",
+    ".env",
+    "*.pfx",
+    "*.pem",
+    "credentials*.json"
+)
+foreach ($pat in $secretPatterns) {
+    Get-ChildItem -Path $outDir -Filter $pat -File -ErrorAction SilentlyContinue | ForEach-Object {
+        Remove-Item $_.FullName -Force
+        Write-Host "==> Removed from zip output: $($_.Name)" -ForegroundColor DarkYellow
+    }
+}
+
 $webviewProfile = Join-Path $outDir "DLLRunTool.exe.WebView2"
 if (Test-Path $webviewProfile) {
     Remove-Item $webviewProfile -Recurse -Force

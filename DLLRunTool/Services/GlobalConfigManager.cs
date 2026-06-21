@@ -43,7 +43,7 @@ public static class GlobalConfigManager
         }
 
         var secretsPath = GetSecretsFilePath(platformId, category);
-        if (File.Exists(secretsPath))
+        if (string.IsNullOrWhiteSpace(result.ConnectionString) && File.Exists(secretsPath))
         {
             var secretsJson = await File.ReadAllTextAsync(secretsPath, ct).ConfigureAwait(false);
             var node = ConfigSecretsHelper.ParseJsonObject(secretsJson);
@@ -64,28 +64,11 @@ public static class GlobalConfigManager
         CancellationToken ct = default)
     {
         var path = GetFilePath(platformId, category);
-        var publicConfig = new ServiceUiConfig
-        {
-            Host = config.Host,
-            Scheme = config.Scheme,
-            Port = config.Port,
-            EnvVars = config.EnvVars,
-            ConnectionString = ""
-        };
-        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(publicConfig, JsonOptions), ct).ConfigureAwait(false);
+        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(config, JsonOptions), ct).ConfigureAwait(false);
 
         var secretsPath = GetSecretsFilePath(platformId, category);
-        if (!string.IsNullOrWhiteSpace(config.ConnectionString))
-        {
-            var secretsPayload = JsonSerializer.Serialize(
-                new { connectionString = config.ConnectionString },
-                JsonOptions);
-            await File.WriteAllTextAsync(secretsPath, secretsPayload, ct).ConfigureAwait(false);
-        }
-        else if (File.Exists(secretsPath))
-        {
+        if (File.Exists(secretsPath))
             File.Delete(secretsPath);
-        }
 
         foreach (var service in services)
         {

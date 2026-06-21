@@ -49,23 +49,26 @@ public static class ConfigFileManager
 
         ParseUrlIntoConfig(selfUrl, result);
 
-        var secretsPath = ResolveSecretsPath(configPath);
-        if (File.Exists(secretsPath))
-        {
-            var secretsJson = await File.ReadAllTextAsync(secretsPath, ct).ConfigureAwait(false);
-            var secretsNode = ConfigSecretsHelper.ParseJsonObject(secretsJson);
-            if (secretsNode?["ConnectionStrings"] is JsonObject secretConn)
-            {
-                var first = secretConn.FirstOrDefault();
-                if (first.Key != null && first.Value != null)
-                    result.ConnectionString = first.Value.GetValue<string>() ?? "";
-            }
-        }
-        else if (node["ConnectionStrings"] is JsonObject connStrings)
+        if (node["ConnectionStrings"] is JsonObject connStrings)
         {
             var first = connStrings.FirstOrDefault();
             if (first.Key != null && first.Value != null)
                 result.ConnectionString = first.Value.GetValue<string>() ?? "";
+        }
+        else
+        {
+            var secretsPath = ResolveSecretsPath(configPath);
+            if (File.Exists(secretsPath))
+            {
+                var secretsJson = await File.ReadAllTextAsync(secretsPath, ct).ConfigureAwait(false);
+                var secretsNode = ConfigSecretsHelper.ParseJsonObject(secretsJson);
+                if (secretsNode?["ConnectionStrings"] is JsonObject secretConn)
+                {
+                    var first = secretConn.FirstOrDefault();
+                    if (first.Key != null && first.Value != null)
+                        result.ConnectionString = first.Value.GetValue<string>() ?? "";
+                }
+            }
         }
 
         return result;
@@ -117,7 +120,7 @@ public static class ConfigFileManager
         await SaveAppSettingsAsync(configPath, url, ct).ConfigureAwait(false);
 
         if (!string.IsNullOrWhiteSpace(config.ConnectionString))
-            await SaveSecretsConnectionStringAsync(configPath, config.ConnectionString, ct).ConfigureAwait(false);
+            await SaveConnectionStringAsync(configPath, config.ConnectionString, ct).ConfigureAwait(false);
 
         foreach (var (key, path) in service.GetSourceConfigFiles())
         {
@@ -131,7 +134,7 @@ public static class ConfigFileManager
             {
                 await SaveAppSettingsAsync(path, url, ct).ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(config.ConnectionString))
-                    await SaveSecretsConnectionStringAsync(path, config.ConnectionString, ct).ConfigureAwait(false);
+                    await SaveConnectionStringAsync(path, config.ConnectionString, ct).ConfigureAwait(false);
             }
         }
 
@@ -142,17 +145,11 @@ public static class ConfigFileManager
         await SyncSourceConfigToOutputAsync(service, ct).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Ghi appsettings vào source: chỉ public config; secrets tách sang appsettings.secrets.json.
-    /// </summary>
+    /// <summary>Ghi nguyên appsettings vào thư mục source project.</summary>
     public static async Task WriteAppSettingsToSourceAsync(string targetPath, string content, CancellationToken ct = default)
     {
-        var (publicContent, secretsNode) = ConfigSecretsHelper.SplitSensitive(content);
         Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
-        await File.WriteAllTextAsync(targetPath, publicContent, ct).ConfigureAwait(false);
-
-        if (secretsNode != null)
-            await MergeSecretsNodeAsync(ResolveSecretsPath(targetPath), secretsNode, ct).ConfigureAwait(false);
+        await File.WriteAllTextAsync(targetPath, content, ct).ConfigureAwait(false);
     }
 
     public static string ResolveSecretsPath(string appsettingsPath) =>
@@ -173,6 +170,8 @@ public static class ConfigFileManager
         foreach (var (key, sourcePath) in service.GetSourceConfigFiles())
         {
             if (string.Equals(key, "launchSettings.json", StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (key.Contains("secrets", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             if (!File.Exists(sourcePath))
@@ -267,28 +266,19 @@ public static class ConfigFileManager
         await File.WriteAllTextAsync(path, patched, ct).ConfigureAwait(false);
     }
 
-    private static async Task SaveSecretsConnectionStringAsync(string appsettingsPath, string connectionString, CancellationToken ct)
+    private static async Task SaveConnectionStringAsync(string appsettingsPath, string connectionString, CancellationToken ct)
     {
-        var secretsPath = ResolveSecretsPath(appsettingsPath);
-        JsonObject secretsNode;
-        if (File.Exists(secretsPath))
-            secretsNode = ConfigSecretsHelper.ParseJsonObject(await File.ReadAllTextAsync(secretsPath, ct).ConfigureAwait(false)) ?? new JsonObject();
-        else
-            secretsNode = new JsonObject();
+        var json = await File.ReadAllTextAsync(appsettingsPath, ct).ConfigureAwait(false);
+        var node = ConfigSecretsHelper.ParseJsonObject(json)
+                   ?? throw new InvalidOperationException("appsettings.json không hợp lệ.");
 
-        if (secretsNode["ConnectionStrings"] is not JsonObject conn)
+        if (node["ConnectionStrings"] is not JsonObject conn)
         {
             conn = new JsonObject();
-            secretsNode["ConnectionStrings"] = conn;
+            node["ConnectionStrings"] = conn;
         }
 
-        var appNode = ConfigSecretsHelper.ParseJsonObject(await File.ReadAllTextAsync(appsettingsPath, ct).ConfigureAwait(false));
-        if (appNode?["ConnectionStrings"] is JsonObject appConn && appConn.Count > 0)
-        {
-            foreach (var key in appConn.Select(p => p.Key))
-                conn[key] = connectionString;
-        }
-        else if (conn.Count > 0)
+        if (conn.Count > 0)
         {
             foreach (var key in conn.Select(p => p.Key).ToList())
                 conn[key] = connectionString;
@@ -298,13 +288,25 @@ public static class ConfigFileManager
             conn["Default"] = connectionString;
         }
 
-        await MergeSecretsNodeAsync(secretsPath, secretsNode, ct).ConfigureAwait(false);
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        await File.WriteAllTextAsync(appsettingsPath, node.ToJsonString(options), ct).ConfigureAwait(false);
     }
 
-    private static async Task MergeSecretsNodeAsync(string secretsPath, JsonObject secretsNode, CancellationToken ct)
+    /// <summary>Gộp ConnectionStrings từ backup secrets (legacy) vào appsettings.json source.</summary>
+    public static async Task MergeSecretsFileIntoAppSettingsAsync(string appsettingsPath, string secretsContent, CancellationToken ct = default)
     {
+        var secretsNode = ConfigSecretsHelper.ParseJsonObject(secretsContent);
+        if (secretsNode?["ConnectionStrings"] is not JsonObject secretConn)
+            return;
+
+        var json = File.Exists(appsettingsPath)
+            ? await File.ReadAllTextAsync(appsettingsPath, ct).ConfigureAwait(false)
+            : "{}";
+        var node = ConfigSecretsHelper.ParseJsonObject(json) ?? new JsonObject();
+        node["ConnectionStrings"] = secretConn.DeepClone();
+
         var options = new JsonSerializerOptions { WriteIndented = true };
-        await File.WriteAllTextAsync(secretsPath, secretsNode.ToJsonString(options), ct).ConfigureAwait(false);
+        await File.WriteAllTextAsync(appsettingsPath, node.ToJsonString(options), ct).ConfigureAwait(false);
     }
 
     /// <summary>
