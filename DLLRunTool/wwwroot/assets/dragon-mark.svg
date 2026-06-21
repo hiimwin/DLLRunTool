@@ -1,24 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" aria-hidden="true">
   <defs>
-    <linearGradient id="dragonBody" x1="12" y1="8" x2="52" y2="56" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#B388FF"/>
-      <stop offset="1" stop-color="#7C4DFF"/>
-    </linearGradient>
-    <linearGradient id="dragonGold" x1="20" y1="18" x2="44" y2="42" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFE082"/>
+    <linearGradient id="bgGold" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8E1"/>
+      <stop offset="0.45" stop-color="#FFE082"/>
       <stop offset="1" stop-color="#F9AB00"/>
     </linearGradient>
+    <linearGradient id="dragonGold" x1="18" y1="16" x2="48" y2="50" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF59D"/>
+      <stop offset="0.35" stop-color="#FFC107"/>
+      <stop offset="1" stop-color="#FF8F00"/>
+    </linearGradient>
+    <linearGradient id="dragonShadow" x1="20" y1="22" x2="44" y2="48" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E65100"/>
+      <stop offset="1" stop-color="#BF360C"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(22 18) rotate(45) scale(20)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <rect x="4" y="4" width="56" height="56" rx="16" fill="#222326"/>
-  <path d="M18 42c2 6 8 10 14 10s12-4 14-10c-2-10-8-18-14-18s-12 8-14 18z" fill="url(#dragonBody)"/>
-  <path d="M16 30c-4-2-6-6-4-10 2-4 8-4 12-2-2 6-2 10 0 14-4-1-6-1-8-2z" fill="url(#dragonBody)" opacity=".9"/>
-  <path d="M48 30c4-2 6-6 4-10-2-4-8-4-12-2 2 6 2 10 0 14 4-1 6-1 8-2z" fill="url(#dragonBody)" opacity=".9"/>
-  <circle cx="26" cy="34" r="3.5" fill="#16171A"/>
-  <circle cx="38" cy="34" r="3.5" fill="#16171A"/>
-  <circle cx="27" cy="33" r="1.2" fill="#E8EAED"/>
-  <circle cx="39" cy="33" r="1.2" fill="#E8EAED"/>
-  <path d="M30 42c2 2 6 2 8 0" stroke="url(#dragonGold)" stroke-width="2.2" stroke-linecap="round"/>
-  <path d="M32 18l2-6 2 6-2 2z" fill="url(#dragonGold)"/>
-  <path d="M24 22l-5-3 2 5z" fill="url(#dragonGold)"/>
-  <path d="M40 22l5-3-2 5z" fill="url(#dragonGold)"/>
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#bgGold)"/>
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#shine)"/>
+  <path d="M18 42c2 6 8 10 14 10s12-4 14-10c-2-10-8-18-14-18s-12 8-14 18z" fill="url(#dragonShadow)" opacity="0.35"/>
+  <path d="M18 41c2 6 8 10 14 10s12-4 14-10c-2-10-8-18-14-18s-12 8-14 18z" fill="url(#dragonGold)"/>
+  <path d="M16 30c-4-2-6-6-4-10 2-4 8-4 12-2-2 6-2 10 0 14-4-1-6-1-8-2z" fill="url(#dragonGold)" opacity="0.92"/>
+  <path d="M48 30c4-2 6-6 4-10-2-4-8-4-12-2 2 6 2 10 0 14 4-1 6-1 8-2z" fill="url(#dragonGold)" opacity="0.92"/>
+  <circle cx="26" cy="34" r="3.2" fill="#5D4037"/>
+  <circle cx="38" cy="34" r="3.2" fill="#5D4037"/>
+  <circle cx="27" cy="33" r="1.1" fill="#FFFDE7"/>
+  <circle cx="39" cy="33" r="1.1" fill="#FFFDE7"/>
+  <path d="M30 42c2 2 6 2 8 0" stroke="#E65100" stroke-width="2" stroke-linecap="round"/>
+  <path d="M32 17l2-5 2 5-2 2z" fill="#FF6F00"/>
+  <path d="M24 21l-5-3 2 5z" fill="#FF6F00"/>
+  <path d="M40 21l5-3-2 5z" fill="#FF6F00"/>
 </svg>

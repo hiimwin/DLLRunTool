@@ -39,6 +39,9 @@ public class BridgeRequest
 
     [JsonPropertyName("locked")]
     public bool? Locked { get; set; }
+
+    [JsonPropertyName("confirmed")]
+    public bool? Confirmed { get; set; }
 }
 
 public class ServiceUiConfig
@@ -96,6 +99,12 @@ public class ServiceStateDto
 
     [JsonPropertyName("isLocked")]
     public bool IsLocked { get; set; }
+
+    [JsonPropertyName("isRunProtected")]
+    public bool IsRunProtected { get; set; }
+
+    [JsonPropertyName("isRunBlocked")]
+    public bool IsRunBlocked { get; set; }
 
     [JsonPropertyName("isStarting")]
     public bool IsStarting { get; set; }

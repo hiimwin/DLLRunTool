@@ -17,6 +17,8 @@ public class ServiceConfig
     public string Type { get; set; } = "BE";
     public string RunCommand { get; set; } = "";
     public string BuildCommand { get; set; } = "";
+    /// <summary>Khoá mặc định — phải mở khóa + xác nhận mới được Run (vd. DbMigrator).</summary>
+    public bool RunProtected { get; set; }
 
     [JsonIgnore]
     public Process? ManagedProcess { get; set; }

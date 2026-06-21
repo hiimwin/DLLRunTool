@@ -1,12 +1,42 @@
 using System.Text.Json;
+using DLLRunTool.Models;
 
 namespace DLLRunTool.Services;
-
 public static class ServiceLocksStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private static readonly HashSet<string> LockedIds = new(StringComparer.OrdinalIgnoreCase);
     private static bool _loaded;
+    private static bool _hadPersistedFile;
+
+    public static void EnsureProtectedDefaults(IEnumerable<ServiceConfig> services)
+    {
+        EnsureLoaded();
+        foreach (var svc in services.Where(s => s.RunProtected))
+        {
+            if (!_hadPersistedFile || !WasEverPersisted(svc.Id))
+                LockedIds.Add(svc.Id);
+        }
+
+        if (!_hadPersistedFile)
+            Save();
+    }
+
+    private static bool WasEverPersisted(string serviceId)
+    {
+        if (string.IsNullOrWhiteSpace(serviceId) || !File.Exists(FilePath))
+            return false;
+
+        try
+        {
+            var json = File.ReadAllText(FilePath);
+            return json.Contains($"\"{serviceId}\"", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     public static bool IsLocked(string serviceId)
     {
@@ -44,7 +74,8 @@ public static class ServiceLocksStore
             return;
 
         _loaded = true;
-        if (!File.Exists(FilePath))
+        _hadPersistedFile = File.Exists(FilePath);
+        if (!_hadPersistedFile)
             return;
 
         try

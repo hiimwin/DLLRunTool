@@ -1420,3 +1420,80 @@ textarea {
   .env-row { grid-template-columns: 1fr; }
   .env-table-header { display: none; }
 }
+
+.service-row-protected {
+  box-shadow: inset 3px 0 0 #f59e0b;
+  opacity: 0.92;
+}
+
+.row-btn.is-locked,
+.row-btn-spacer.is-locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.app-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(10, 10, 12, 0.62);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.18s ease;
+}
+
+.app-dialog {
+  width: min(440px, 100%);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px 22px 18px;
+  animation: slideUp 0.22s ease;
+}
+
+.app-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.app-dialog-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.app-dialog-header h3 {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.app-dialog-message {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  white-space: pre-line;
+  margin-bottom: 18px;
+}
+
+.app-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn.danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+[data-theme="dark"] .btn.danger {
+  color: #fff;
+}

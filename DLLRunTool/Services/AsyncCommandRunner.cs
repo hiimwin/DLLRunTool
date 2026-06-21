@@ -92,58 +92,102 @@ public sealed class AsyncCommandRunner
             WindowStyle = ProcessWindowStyle.Minimized
         };
 
-        Process.Start(psi);
-        ProcessStatusCache.Invalidate();
-
-        for (var i = 0; i < 20; i++)
+        Process? started = null;
+        try
         {
-            Thread.Sleep(250);
-            ProcessStatusCache.RefreshIfStale(force: true);
-            var found = ProcessTreeKiller.FindRunningProcess(service, forceRefresh: true);
-            if (found == null)
-                found = ProcessStatusCache.FindExeProcess(service.DllName, useCache: false);
-
-            if (found != null && !found.HasExited)
-            {
-                service.ManagedProcess = found;
-                found.EnableRaisingEvents = true;
-                found.Exited += (_, _) =>
-                {
-                    if (service.ManagedProcess?.Id == found.Id)
-                        service.ManagedProcess = null;
-                };
-                _emitLog(new LogPayload
-                {
-                    ServiceId = service.Id,
-                    Level = "success",
-                    Message = $"{service.Name} đã khởi động (PID {found.Id})."
-                });
-                return found;
-            }
+            started = Process.Start(psi);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Process.Start thất bại: {ex.Message}", ex);
         }
 
-        // Redis đã chạy nhưng WMI chậm — thử lần cuối bằng Process API
+        ProcessStatusCache.Invalidate();
+        var startedPid = started?.Id;
+
+        for (var i = 0; i < 40; i++)
+        {
+            Thread.Sleep(250);
+
+            if (startedPid is > 0)
+            {
+                var direct = TryGetLiveProcess(startedPid.Value);
+                if (direct != null)
+                    return AttachExeProcess(service, direct);
+            }
+
+            ProcessStatusCache.RefreshIfStale(force: true);
+            var found = ProcessTreeKiller.FindRunningProcess(service, forceRefresh: true)
+                        ?? ProcessStatusCache.FindExeProcess(service.DllName, useCache: false);
+            if (found != null && !found.HasExited)
+                return AttachExeProcess(service, found);
+        }
+
         var fallback = ProcessStatusCache.FindExeProcess(service.DllName, useCache: false);
         if (fallback != null && !fallback.HasExited)
+            return AttachExeProcess(service, fallback);
+
+        if (startedPid is > 0 && IsProcessNameRunning(service.DllName))
         {
-            service.ManagedProcess = fallback;
-            fallback.EnableRaisingEvents = true;
-            fallback.Exited += (_, _) =>
-            {
-                if (service.ManagedProcess?.Id == fallback.Id)
-                    service.ManagedProcess = null;
-            };
+            var late = ProcessStatusCache.FindExeProcess(service.DllName, useCache: false);
+            if (late != null && !late.HasExited)
+                return AttachExeProcess(service, late);
+
             _emitLog(new LogPayload
             {
                 ServiceId = service.Id,
                 Level = "success",
-                Message = $"{service.Name} đã khởi động (PID {fallback.Id})."
+                Message = $"{service.Name} đã khởi động (PID {startedPid}) — process đang chạy."
             });
-            return fallback;
+            return started;
         }
 
         throw new InvalidOperationException(
             $"{service.Name} không phát hiện được sau khi start. Thử chạy thủ công: {fileName}");
+    }
+
+    private Process AttachExeProcess(ServiceConfig service, Process found)
+    {
+        service.ManagedProcess = found;
+        found.EnableRaisingEvents = true;
+        found.Exited += (_, _) =>
+        {
+            if (service.ManagedProcess?.Id == found.Id)
+                service.ManagedProcess = null;
+        };
+        _emitLog(new LogPayload
+        {
+            ServiceId = service.Id,
+            Level = "success",
+            Message = $"{service.Name} đã khởi động (PID {found.Id})."
+        });
+        return found;
+    }
+
+    private static Process? TryGetLiveProcess(int pid)
+    {
+        try
+        {
+            var p = Process.GetProcessById(pid);
+            return p.HasExited ? null : p;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool IsProcessNameRunning(string dllOrExeName)
+    {
+        var name = Path.GetFileNameWithoutExtension(dllOrExeName);
+        if (string.IsNullOrWhiteSpace(name))
+            return false;
+
+        return Process.GetProcessesByName(name).Any(p =>
+        {
+            try { return !p.HasExited; }
+            catch { return false; }
+        });
     }
 
     private Process? StartConsoleService(ServiceConfig service, ResolvedRunCommand cmd)

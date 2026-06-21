@@ -43,7 +43,7 @@ public static class BackupFileDialogs
                   "trực tiếp trong thư mục project source.\n\n" +
                   "Hành động này không thể hoàn tác tự động.";
 
-        return MessageBox.Show(owner, msg, "Apply vào Source", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) ==
+        return StyledMessageBox.Show(owner, msg, "Apply vào Source", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) ==
                DialogResult.Yes;
     }
 

@@ -150,7 +150,34 @@ public static class ProcessStatusCache
             // WMI unavailable — keep empty cache
         }
 
+        RefreshExeProcessesFallback();
         _refreshedAt = DateTime.UtcNow;
+    }
+
+    private static void RefreshExeProcessesFallback()
+    {
+        foreach (var exeName in new[] { "redis-server" })
+        {
+            try
+            {
+                foreach (var proc in Process.GetProcessesByName(exeName))
+                {
+                    try
+                    {
+                        if (!proc.HasExited)
+                            _exeProcesses[exeName] = proc.Id;
+                    }
+                    catch
+                    {
+                        // ignore stale process handle
+                    }
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+        }
     }
 
     private static Process? TryGetProcess(int pid)

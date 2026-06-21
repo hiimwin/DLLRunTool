@@ -9,7 +9,7 @@
       nav: { main: "Điều hướng chính", dashboard: "Dịch vụ", workspace: "Workspace", global: "Cấu hình chung", backup: "Sao lưu" },
       category: { group: "Nhóm", be: "Back-End", fe: "Front-End" },
       hint: {
-        dashboardBe: "Danh sách Back-End — dotnet run / appsettings",
+        dashboardBe: "Danh sách Back-End — dotnet dll --urls / appsettings",
         dashboardFe: "Danh sách Front-End — npm start / env.js",
         globalBe: "Áp dụng host + connection string cho mọi BE",
         globalFe: "Áp dụng env.js cho mọi FE trong platform"
@@ -107,7 +107,15 @@
       },
       lock: {
         locked: "Đã khóa — không bị Stop All / thoát tool dừng",
-        unlocked: "Khóa — giữ chạy khi Stop All hoặc thoát tool"
+        unlocked: "Khóa — giữ chạy khi Stop All hoặc thoát tool",
+        protectedLocked: "Service nhạy cảm — đã khóa Run",
+        protectedUnlockTitle: "Mở khóa service",
+        protectedUnlockMsg: "{name} chỉ chạy khi cần migrate DB.\n\nBạn chắc chắn muốn mở khóa và cho phép Run?",
+        protectedRunTitle: "Chạy service nhạy cảm",
+        protectedRunMsg: "Bạn sắp chạy {name}.\n\nChỉ dùng khi migrate DB — có thể ảnh hưởng dữ liệu.",
+        unlock: "Mở khóa",
+        runConfirm: "Chạy ngay",
+        cancel: "Hủy"
       },
       log: { viewService: "Xem log service này" },
       update: {
@@ -121,7 +129,11 @@
       },
       confirm: {
         stopAll: "Dừng tất cả service đang chạy?",
-        stopAllLocked: "{count} service đã khóa sẽ không bị dừng:\n{names}"
+        stopAllTitle: "Dừng tất cả",
+        stopAllLocked: "{count} service đã khóa sẽ không bị dừng: {names}",
+        yes: "Đồng ý",
+        no: "Không",
+        cancel: "Hủy"
       },
       run: { starting: "Đang khởi động...", restarting: "Đang restart..." },
       label: { scheme: "Scheme", host: "Host", port: "Port", key: "Key", value: "Value" }
@@ -133,7 +145,7 @@
       nav: { main: "Main navigation", dashboard: "Services", workspace: "Workspace", global: "Global config", backup: "Backup" },
       category: { group: "Group", be: "Back-End", fe: "Front-End" },
       hint: {
-        dashboardBe: "Back-End list — dotnet run / appsettings",
+        dashboardBe: "Back-End list — dotnet dll --urls / appsettings",
         dashboardFe: "Front-End list — npm start / env.js",
         globalBe: "Apply host + connection string to all BE services",
         globalFe: "Apply env.js to all FE services in platform"
@@ -231,7 +243,15 @@
       },
       lock: {
         locked: "Locked — not stopped by Stop All / exit",
-        unlocked: "Lock — keep running on Stop All or exit"
+        unlocked: "Lock — keep running on Stop All or exit",
+        protectedLocked: "Sensitive service — Run is locked",
+        protectedUnlockTitle: "Unlock service",
+        protectedUnlockMsg: "{name} should only run for DB migration.\n\nUnlock and allow Run?",
+        protectedRunTitle: "Run sensitive service",
+        protectedRunMsg: "You are about to run {name}.\n\nUse only for DB migration — may affect data.",
+        unlock: "Unlock",
+        runConfirm: "Run now",
+        cancel: "Cancel"
       },
       log: { viewService: "View this service log" },
       update: {
@@ -245,7 +265,11 @@
       },
       confirm: {
         stopAll: "Stop all running services?",
-        stopAllLocked: "{count} locked service(s) will not be stopped:\n{names}"
+        stopAllTitle: "Stop all",
+        stopAllLocked: "{count} locked service(s) will not be stopped: {names}",
+        yes: "Confirm",
+        no: "No",
+        cancel: "Cancel"
       },
       run: { starting: "Starting...", restarting: "Restarting..." },
       label: { scheme: "Scheme", host: "Host", port: "Port", key: "Key", value: "Value" }

@@ -2,5 +2,5 @@
     "version": "1.0.0",
     "releasedAt": "2026-06-20",
     "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1/Win_Trung-MicroservicesControlPanel.zip",
-    "releaseNotes": "Icon rong Win_Trung; scrollbar dep; bo goc cua so; layout full co gian; zip an URL update"
+    "releaseNotes": "Fix Redis false error; dotnet dll --urls; DbMigrator khoa Run; dialog dep; icon rong vang; sap xep service"
 }

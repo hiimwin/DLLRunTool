@@ -50,6 +50,8 @@ public sealed class ServiceOrchestrator
         foreach (var platform in _platforms)
             _platformServices[platform.Id] = LoadServices(platform.ConfigFile);
 
+        ServiceLocksStore.EnsureProtectedDefaults(_platformServices.Values.SelectMany(s => s));
+
         _statusTimer = new System.Windows.Forms.Timer { Interval = 8000 };
         _statusTimer.Tick += (_, _) => _ = RefreshStatusesAsync();
         _statusTimer.Start();
@@ -287,12 +289,12 @@ public sealed class ServiceOrchestrator
         var running = CountRunningServices();
         if (running > 0)
         {
-            var answer = RunOnUi(() => System.Windows.Forms.MessageBox.Show(
+            var answer = RunOnUi(() => StyledMessageBox.Show(
                 _uiOwner?.FindForm(),
                 $"Có {running} service đang chạy.\n\nCập nhật sẽ thoát tool và khởi động lại — service nền vẫn chạy.\nTiếp tục?",
                 AppTitle,
-                System.Windows.Forms.MessageBoxButtons.YesNo,
-                System.Windows.Forms.MessageBoxIcon.Question));
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question));
             if (answer != System.Windows.Forms.DialogResult.Yes)
                 return;
         }
@@ -413,6 +415,7 @@ public sealed class ServiceOrchestrator
         foreach (var platform in _platforms)
             _platformServices[platform.Id] = LoadServices(platform.ConfigFile);
 
+        ServiceLocksStore.EnsureProtectedDefaults(_platformServices.Values.SelectMany(s => s));
         ProcessStatusCache.Invalidate();
         _lastStatusSnapshot = "";
     }
@@ -483,6 +486,19 @@ public sealed class ServiceOrchestrator
 
     private async Task RestartServiceAsync(string serviceId, string? platformId = null)
     {
+        var service = FindService(serviceId, platformId);
+        if (service != null && IsRunBlocked(service))
+        {
+            PushLog(new LogPayload
+            {
+                ServiceId = service.Id,
+                ServiceName = service.Name,
+                Level = "warning",
+                Message = $"{service.Name} đang khóa — mở khóa trước khi restart."
+            });
+            return;
+        }
+
         if (!TryAcquireServiceOperation(serviceId, "run"))
         {
             var busy = FindService(serviceId, platformId);
@@ -506,9 +522,9 @@ public sealed class ServiceOrchestrator
         {
             StopService(serviceId, platformId);
             await Task.Delay(500).ConfigureAwait(false);
-            var service = FindService(serviceId, platformId);
-            if (service != null)
-                await RunServiceCoreAsync(new BridgeRequest { ServiceId = serviceId, PlatformId = platformId }, service).ConfigureAwait(false);
+            var target = FindService(serviceId, platformId);
+            if (target != null)
+                await RunServiceCoreAsync(new BridgeRequest { ServiceId = serviceId, PlatformId = platformId }, target).ConfigureAwait(false);
         }
         finally
         {
@@ -591,6 +607,18 @@ public sealed class ServiceOrchestrator
         var service = FindService(request.ServiceId!, request.PlatformId);
         if (service == null)
             return;
+
+        if (IsRunBlocked(service) && request.Confirmed != true)
+        {
+            PushLog(new LogPayload
+            {
+                ServiceId = service.Id,
+                ServiceName = service.Name,
+                Level = "warning",
+                Message = $"{service.Name} đang khóa — mở khóa và xác nhận trước khi chạy."
+            });
+            return;
+        }
 
         if (!TryAcquireServiceOperation(service.Id, "run"))
         {
@@ -693,6 +721,18 @@ public sealed class ServiceOrchestrator
         if (service.IsExe)
         {
             PushLog(new LogPayload { ServiceId = service.Id, Level = "warning", Message = $"{service.Name} là executable — không có bước build." });
+            return;
+        }
+
+        if (IsRunBlocked(service))
+        {
+            PushLog(new LogPayload
+            {
+                ServiceId = service.Id,
+                ServiceName = service.Name,
+                Level = "warning",
+                Message = $"{service.Name} đang khóa — mở khóa trước khi build."
+            });
             return;
         }
 
@@ -1166,6 +1206,7 @@ public sealed class ServiceOrchestrator
     private ServiceStateDto ToStateDto(ServiceConfig s)
     {
         var op = GetServiceOperation(s.Id);
+        var locked = ServiceLocksStore.IsLocked(s.Id);
         return new ServiceStateDto
         {
             Id = s.Id,
@@ -1178,11 +1219,16 @@ public sealed class ServiceOrchestrator
                 : "",
             DllName = s.DllName,
             IsExe = s.IsExe,
-            IsLocked = ServiceLocksStore.IsLocked(s.Id),
+            IsLocked = locked,
+            IsRunProtected = s.RunProtected,
+            IsRunBlocked = IsRunBlocked(s),
             IsStarting = op == "run",
             IsBuilding = op == "build"
         };
     }
+
+    private static bool IsRunBlocked(ServiceConfig service) =>
+        service.RunProtected && ServiceLocksStore.IsLocked(service.Id);
 
     private static List<ServiceConfig> LoadServices(string fileName)
     {

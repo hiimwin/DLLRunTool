@@ -45,7 +45,8 @@ public partial class MainForm : Form
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            StyledMessageBox.Show(
+                this,
                 $"Không thể khởi tạo WebView2.\n\n{ex.Message}\n\nHãy cài đặt WebView2 Runtime.",
                 ServiceOrchestrator.AppTitle,
                 MessageBoxButtons.OK,
@@ -73,7 +74,8 @@ public partial class MainForm : Form
             ? $"\n\n{lockedRunning} service đã khóa sẽ tiếp tục chạy."
             : "";
 
-        var result = MessageBox.Show(
+        var result = StyledMessageBox.Show(
+            this,
             $"Có {running} service đang chạy.{lockedNote}\n\n" +
             (stoppable > 0
                 ? $"• Có = Dừng {stoppable} service (trừ khóa) rồi thoát\n"

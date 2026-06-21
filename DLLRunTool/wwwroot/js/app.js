@@ -109,6 +109,48 @@
 
   let pendingImportPath = null;
 
+  function showAppDialog({ title, message, buttons }) {
+    const overlay = $("appDialog");
+    const titleEl = $("appDialogTitle");
+    const messageEl = $("appDialogMessage");
+    const actionsEl = $("appDialogActions");
+    if (!overlay || !titleEl || !messageEl || !actionsEl) {
+      return Promise.resolve(buttons?.[buttons.length - 1]?.id || "cancel");
+    }
+
+    titleEl.textContent = title || "";
+    messageEl.textContent = message || "";
+    actionsEl.innerHTML = "";
+    overlay.classList.remove("hidden");
+
+    return new Promise((resolve) => {
+      const close = (id) => {
+        overlay.classList.add("hidden");
+        resolve(id);
+      };
+
+      (buttons || []).forEach((btn) => {
+        const el = document.createElement("button");
+        el.type = "button";
+        el.textContent = btn.label;
+        el.className = "btn";
+        if (btn.primary) el.classList.add("primary");
+        if (btn.danger) el.classList.add("danger");
+        if (!btn.primary && !btn.danger) el.classList.add("ghost");
+        el.onclick = () => close(btn.id);
+        actionsEl.appendChild(el);
+      });
+
+      overlay.onclick = (e) => {
+        if (e.target === overlay) close("cancel");
+      };
+    });
+  }
+
+  function isRunBlocked(svc) {
+    return !!(svc && svc.isRunProtected && svc.isLocked);
+  }
+
   function applyTheme() {
     document.body.setAttribute("data-theme", state.theme);
     localStorage.setItem("mcp-theme", state.theme);
@@ -176,6 +218,12 @@
   }
 
   function renderRunStopButton(svc) {
+    if (isRunBlocked(svc)) {
+      return `<button class="row-btn success is-locked" disabled title="${escapeAttr(t("lock.protectedLocked"))}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        ${escapeHtml(t("btn.run"))}
+      </button>`;
+    }
     if (svc.isStarting) {
       return `<button class="row-btn success is-busy" disabled title="${escapeAttr(t("btn.startingTitle"))}">
         <svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
@@ -197,6 +245,12 @@
 
   function renderBuildButton(svc) {
     const label = escapeHtml(t("btn.build"));
+    if (isRunBlocked(svc)) {
+      return `<span class="row-btn row-btn-spacer secondary is-locked" aria-hidden="true" title="${escapeAttr(t("lock.protectedLocked"))}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        ${label}
+      </span>`;
+    }
     if (svc.isExe) {
       return `<span class="row-btn row-btn-spacer secondary" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
@@ -234,7 +288,7 @@
   function renderDashboard() {
     const list = getActiveServices();
     const signature = list.map((s) => s.id).join(",");
-    const statusSig = list.map((s) => `${s.id}:${s.isRunning ? 1 : 0}:${s.isLocked ? 1 : 0}:${s.isStarting ? 1 : 0}:${s.isBuilding ? 1 : 0}`).join(",");
+    const statusSig = list.map((s) => `${s.id}:${s.isRunning ? 1 : 0}:${s.isLocked ? 1 : 0}:${s.isRunProtected ? 1 : 0}:${s.isStarting ? 1 : 0}:${s.isBuilding ? 1 : 0}`).join(",");
     const hasRows = !!els.dashboardList.querySelector("[data-service-id]");
 
     if (signature === state.dashboardSig && hasRows) {
@@ -257,7 +311,7 @@
     list.forEach((svc) => {
       const displayName = svc.dllName || svc.name;
       const row = document.createElement("div");
-      row.className = "service-row";
+      row.className = `service-row${isRunBlocked(svc) ? " service-row-protected" : ""}`;
       row.dataset.serviceId = svc.id;
       row.innerHTML = `
         <span class="status-led${svc.isRunning ? " running" : ""}${svc.isStarting && !svc.isRunning ? " starting" : ""}"></span>
@@ -355,20 +409,37 @@
     };
   }
 
-  function handleRowAction(action, serviceId) {
+  async function handleRowAction(action, serviceId) {
     const svc = findServiceInState(serviceId);
     if (action !== "stop" && action !== "lock" && action !== "logs" && action !== "settings" && isServiceBusy(svc)) {
       return;
     }
 
+    if ((action === "run" || action === "build" || action === "restart") && isRunBlocked(svc)) {
+      return;
+    }
+
     const payload = { serviceId, platformId: state.platformId };
     switch (action) {
-      case "run":
+      case "run": {
+        if (svc?.isRunProtected && !svc.isLocked) {
+          const ok = await showAppDialog({
+            title: t("lock.protectedRunTitle"),
+            message: t("lock.protectedRunMsg", { name: svc.name }),
+            buttons: [
+              { id: "cancel", label: t("lock.cancel") },
+              { id: "run", label: t("lock.runConfirm"), primary: true }
+            ]
+          });
+          if (ok !== "run") return;
+          payload.confirmed = true;
+        }
         setLogFilterValue(serviceId, findServiceName(serviceId));
         setLocalServiceFlags(serviceId, { isStarting: true });
         setRunProgress({ serviceId, active: true, label: t("run.starting") });
         Bridge.send("run", payload);
         break;
+      }
       case "stop": Bridge.send("stop", payload); break;
       case "build": Bridge.send("build", payload); break;
       case "restart":
@@ -391,11 +462,23 @@
         break;
       }
       case "lock": {
-        const svc = getActiveServices().find((s) => s.id === serviceId);
+        const current = getActiveServices().find((s) => s.id === serviceId);
+        const nextLocked = !(current && current.isLocked);
+        if (current?.isRunProtected && current.isLocked && !nextLocked) {
+          const ok = await showAppDialog({
+            title: t("lock.protectedUnlockTitle"),
+            message: t("lock.protectedUnlockMsg", { name: current.name }),
+            buttons: [
+              { id: "cancel", label: t("lock.cancel") },
+              { id: "unlock", label: t("lock.unlock"), primary: true }
+            ]
+          });
+          if (ok !== "unlock") return;
+        }
         Bridge.send("toggleServiceLock", {
           serviceId,
           platformId: state.platformId,
-          locked: !(svc && svc.isLocked)
+          locked: nextLocked
         });
         break;
       }
@@ -941,7 +1024,7 @@
   if (els.btnReloadServices) {
     els.btnReloadServices.onclick = () => Bridge.send("reloadServices");
   }
-  els.btnStopAll.onclick = () => {
+  els.btnStopAll.onclick = async () => {
     const lockedRunning = getActiveServices().filter((s) => s.isRunning && s.isLocked);
     let msg = t("confirm.stopAll");
     if (lockedRunning.length > 0) {
@@ -950,9 +1033,16 @@
         names: lockedRunning.map((s) => s.name).join(", ")
       })}`;
     }
-    if (confirm(msg)) {
-      Bridge.send("stopAll");
-    }
+    const ok = await showAppDialog({
+      title: t("confirm.stopAllTitle"),
+      message: msg,
+      buttons: [
+        { id: "cancel", label: t("confirm.cancel") },
+        { id: "no", label: t("confirm.no") },
+        { id: "yes", label: t("confirm.yes"), primary: true, danger: true }
+      ]
+    });
+    if (ok === "yes") Bridge.send("stopAll");
   };
   function updateConsoleModeHint(showExternal) {
     if (!els.consoleModeHint) return;
