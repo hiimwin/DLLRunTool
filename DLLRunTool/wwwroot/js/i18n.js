@@ -74,7 +74,8 @@
         folder: "Thư mục backup: {path}",
         empty: "Chưa có backup nào.",
         emptyFolder: "Chưa có backup nào trong thư mục backups.",
-        preview: "Xem"
+        preview: "Xem",
+        dryRunSummary: "Dry-run: {changed} file sẽ đổi · {unchanged} giữ nguyên · {skipped} bỏ qua"
       },
       console: {
         title: "Console Log",
@@ -93,7 +94,22 @@
         resize: "Kéo để thay đổi chiều cao log",
         filterLog: "Đang lọc log: {name}",
         logEmptyCmd: "Chưa có log cho {name} trong buffer. Log vẫn stream vào Console Log khi bật CMD riêng — cửa sổ mirror mở ngay (không cần RUN lại).",
-        logEmpty: "Chưa có log cho {name} trong buffer. STOP rồi RUN lại từ tool để stream log."
+        logEmpty: "Chưa có log cho {name} trong buffer. STOP rồi RUN lại từ tool để stream log.",
+        searchPlaceholder: "Tìm trong log...",
+        copyLog: "Copy log",
+        copied: "Đã copy {count} dòng log."
+      },
+      stack: { run: "Chạy stack", stop: "Dừng stack" },
+      health: {
+        healthy: "Health OK",
+        unhealthy: "Health lỗi",
+        crashed: "Đã crash",
+        starting: "Đang kiểm tra health",
+        unknown: ""
+      },
+      secret: {
+        banner: "Phát hiện {count} file config có dữ liệu nhạy cảm — cẩn thận khi commit.",
+        dismiss: "Ẩn"
       },
       modal: {
         title: "Cấu hình service",
@@ -107,7 +123,8 @@
       },
       btn: {
         run: "Run", stop: "Stop", build: "Build", restart: "Restart", log: "Log",
-        settings: "Cấu hình", starting: "Starting", startingTitle: "Đang khởi động..."
+        settings: "Cấu hình", starting: "Starting", startingTitle: "Đang khởi động...",
+        openProject: "Mở thư mục project", openCmd: "CMD tại project"
       },
       lock: {
         locked: "Đã khóa — không bị Stop All / thoát tool dừng",
@@ -127,6 +144,7 @@
         now: "Cập nhật ngay",
         check: "Kiểm tra lại",
         later: "Để sau",
+        laterMonth: "Bỏ qua tháng này",
         message: "v{current} → v{latest}{notes}. Nhấn Cập nhật ngay để tự tải, áp dụng và khởi động lại.",
         noUrl: "Chưa có link tải trong manifest",
         downloading: "Đang cập nhật..."
@@ -214,7 +232,8 @@
         folder: "Backup folder: {path}",
         empty: "No backups yet.",
         emptyFolder: "No backups in backups folder.",
-        preview: "View"
+        preview: "View",
+        dryRunSummary: "Dry-run: {changed} will change · {unchanged} unchanged · {skipped} skipped"
       },
       console: {
         title: "Console Log",
@@ -233,7 +252,22 @@
         resize: "Drag to resize log panel",
         filterLog: "Filtering logs: {name}",
         logEmptyCmd: "No logs for {name} in buffer. Logs still stream here with external CMD — mirror opens immediately (no re-run needed).",
-        logEmpty: "No logs for {name} in buffer. STOP then RUN from tool to stream logs."
+        logEmpty: "No logs for {name} in buffer. STOP then RUN from tool to stream logs.",
+        searchPlaceholder: "Search logs...",
+        copyLog: "Copy log",
+        copied: "Copied {count} log lines."
+      },
+      stack: { run: "Run stack", stop: "Stop stack" },
+      health: {
+        healthy: "Health OK",
+        unhealthy: "Health failed",
+        crashed: "Crashed",
+        starting: "Checking health",
+        unknown: ""
+      },
+      secret: {
+        banner: "{count} config file(s) may contain secrets — be careful before commit.",
+        dismiss: "Dismiss"
       },
       modal: {
         title: "Service configuration",
@@ -247,7 +281,8 @@
       },
       btn: {
         run: "Run", stop: "Stop", build: "Build", restart: "Restart", log: "Log",
-        settings: "Settings", starting: "Starting", startingTitle: "Starting..."
+        settings: "Settings", starting: "Starting", startingTitle: "Starting...",
+        openProject: "Open project folder", openCmd: "CMD at project"
       },
       lock: {
         locked: "Locked — not stopped by Stop All / exit",
@@ -267,6 +302,7 @@
         now: "Update now",
         check: "Check again",
         later: "Later",
+        laterMonth: "Skip this month",
         message: "v{current} → v{latest}{notes}. Click Update now to download, apply and restart.",
         noUrl: "No download URL in manifest",
         downloading: "Updating..."

@@ -24,6 +24,7 @@ public sealed class ServiceOrchestrator
     private int _statusRefreshRunning;
     private readonly object _serviceOpsGate = new();
     private readonly Dictionary<string, string> _serviceOps = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _healthStatus = new(StringComparer.OrdinalIgnoreCase);
 
     public const string AppAuthor = "Win_Trung";
     public const string AppTitle = "Win_Trung - Microservices Control Panel";
@@ -213,6 +214,24 @@ public sealed class ServiceOrchestrator
                 case "openUpdateUrl":
                     await ApplyUpdateAsync(request.FilePath).ConfigureAwait(false);
                     break;
+                case "saveUiState":
+                    SaveUiState(request);
+                    break;
+                case "openFolder":
+                    OpenServiceFolder(request);
+                    break;
+                case "openCmdAtProject":
+                    OpenCmdAtProject(request);
+                    break;
+                case "runStackPreset":
+                    await RunStackPresetAsync(request.PresetId).ConfigureAwait(false);
+                    break;
+                case "stopStackPreset":
+                    StopStackPreset(request.PresetId);
+                    break;
+                case "scanConfigSecrets":
+                    SendConfigSecretScan();
+                    break;
             }
         }
         catch (Exception ex)
@@ -239,8 +258,13 @@ public sealed class ServiceOrchestrator
                 {
                     showConsoleWindow = RunSettingsStore.ShowConsoleWindow,
                     showConsoleSelected = RunSettingsStore.ShowConsoleSelected,
-                    consoleSelectedServiceId = RunSettingsStore.ConsoleSelectedServiceId
-                }
+                    consoleSelectedServiceId = RunSettingsStore.ConsoleSelectedServiceId,
+                    stopGracefulTimeoutMs = RunSettingsStore.StopGracefulTimeoutMs
+                },
+                uiState = UiStateStore.Current,
+                stackPresets = StackPresetsStore.Load().Select(p => new { p.Id, p.Name, count = p.ServiceIds.Count }),
+                configSecretFindings = ConfigSecretScanner.ScanServices(GetActiveServices())
+                    .Select(f => new { f.ServiceName, f.FilePath, f.Reason })
             }
         });
         PushServicesList();
@@ -671,7 +695,7 @@ public sealed class ServiceOrchestrator
             return;
         }
 
-        ProcessTreeKiller.KillByService(service);
+        ProcessTreeKiller.KillByService(service, RunSettingsStore.StopGracefulTimeoutMs);
         try
         {
             _commandRunner.ShowConsoleWindow = RunSettingsStore.ShowConsoleWindow;
@@ -699,6 +723,8 @@ public sealed class ServiceOrchestrator
                 Level = "success",
                 Message = $"{service.Name} đang chạy ({mode})..."
             });
+            _healthStatus[service.Id] = "starting";
+            _ = PollHealthAsync(service);
         }
         catch (Exception ex)
         {
@@ -712,7 +738,8 @@ public sealed class ServiceOrchestrator
         if (service == null)
             return;
 
-        ProcessTreeKiller.KillByService(service);
+        ProcessTreeKiller.KillByService(service, RunSettingsStore.StopGracefulTimeoutMs);
+        _healthStatus[service.Id] = "unknown";
         PushLog(new LogPayload { ServiceId = service.Id, Level = "warning", Message = $"Service {service.Name} đã dừng." });
         RefreshAllStatuses();
     }
@@ -898,7 +925,8 @@ public sealed class ServiceOrchestrator
                     continue;
                 }
 
-                ProcessTreeKiller.KillByService(service);
+                ProcessTreeKiller.KillByService(service, RunSettingsStore.StopGracefulTimeoutMs);
+                _healthStatus[service.Id] = "unknown";
                 stopped++;
             }
         }
@@ -1151,11 +1179,17 @@ public sealed class ServiceOrchestrator
         var package = await ConfigBackupManager.LoadBackupAsync(path).ConfigureAwait(false);
         var platform = _platforms.First(p => p.Id == _activePlatformId);
         var isLocal = path.Equals(LocalDefaultsStore.GetPath(platform.Id), StringComparison.OrdinalIgnoreCase);
+        var preview = ConfigBackupManager.BuildPreview(package, platform.Id, platform.Name, path, isLocal);
+        var dryRun = await ConfigBackupManager.ApplyToSourceAsync(package, platform.Id, GetActiveServices(), dryRun: true).ConfigureAwait(false);
+        preview.DryRunChangedCount = dryRun.ChangedCount;
+        preview.DryRunUnchangedCount = dryRun.UnchangedCount;
+        preview.DryRunSkippedCount = dryRun.SkippedCount;
+        preview.DryRunMessages = dryRun.Messages;
 
         _pushToUi(new BridgeResponse
         {
             Type = "importPreview",
-            Payload = ConfigBackupManager.BuildPreview(package, platform.Id, platform.Name, path, isLocal)
+            Payload = preview
         });
     }
 
@@ -1279,8 +1313,167 @@ public sealed class ServiceOrchestrator
             IsRunProtected = s.RunProtected,
             IsRunBlocked = IsRunBlocked(s),
             IsStarting = op == "run",
-            IsBuilding = op == "build"
+            IsBuilding = op == "build",
+            HealthStatus = _healthStatus.GetValueOrDefault(s.Id, s.IsRunning ? "starting" : "unknown"),
+            Notes = s.Notes ?? ""
         };
+    }
+
+    private void SaveUiState(BridgeRequest request)
+    {
+        UiStateStore.Patch(state =>
+        {
+            if (!string.IsNullOrWhiteSpace(request.View))
+                state.View = request.View!;
+            if (!string.IsNullOrWhiteSpace(request.Category))
+                state.Category = request.Category!;
+            if (!string.IsNullOrWhiteSpace(request.PlatformId))
+                state.PlatformId = request.PlatformId!;
+            if (request.LogFilterServiceId != null)
+                state.LogFilterServiceId = request.LogFilterServiceId;
+        });
+    }
+
+    private void OpenServiceFolder(BridgeRequest request)
+    {
+        var service = FindService(request.ServiceId!, request.PlatformId);
+        if (service == null)
+            return;
+
+        var path = FolderOpener.ResolveFolder(service, request.FolderKind ?? "project");
+        FolderOpener.OpenPath(path);
+        PushLog(new LogPayload
+        {
+            ServiceId = service.Id,
+            Level = "info",
+            Message = $"Đã mở thư mục {request.FolderKind}: {path}"
+        });
+    }
+
+    private void OpenCmdAtProject(BridgeRequest request)
+    {
+        var service = FindService(request.ServiceId!, request.PlatformId);
+        if (service == null)
+            return;
+
+        var dir = service.ResolveSourceProjectPath();
+        FolderOpener.OpenCmdAt(dir, service.Name);
+        PushLog(new LogPayload
+        {
+            ServiceId = service.Id,
+            Level = "info",
+            Message = $"CMD tại project: {dir}"
+        });
+    }
+
+    private async Task RunStackPresetAsync(string? presetId)
+    {
+        var preset = string.IsNullOrWhiteSpace(presetId) ? null : StackPresetsStore.Find(presetId);
+        if (preset == null)
+        {
+            PushLog(new LogPayload { Level = "error", Message = "Không tìm thấy dev stack preset." });
+            return;
+        }
+
+        PushLog(new LogPayload { Level = "info", Message = $"Bắt đầu stack «{preset.Name}» ({preset.ServiceIds.Count} service)..." });
+        foreach (var id in preset.ServiceIds)
+        {
+            var service = FindService(id);
+            if (service == null)
+            {
+                PushLog(new LogPayload { Level = "warning", Message = $"Bỏ qua {id} — không có trong danh sách." });
+                continue;
+            }
+
+            if (IsRunBlocked(service))
+            {
+                PushLog(new LogPayload { ServiceId = service.Id, Level = "warning", Message = $"{service.Name} bị khóa — bỏ qua." });
+                continue;
+            }
+
+            if (ProcessTreeKiller.FindRunningProcess(service) != null)
+                continue;
+
+            await RunServiceAsync(new BridgeRequest { ServiceId = service.Id, PlatformId = _activePlatformId }).ConfigureAwait(false);
+            await Task.Delay(600).ConfigureAwait(false);
+        }
+
+        PushLog(new LogPayload { Level = "success", Message = $"Hoàn tất chạy stack «{preset.Name}»." });
+    }
+
+    private void StopStackPreset(string? presetId)
+    {
+        var preset = string.IsNullOrWhiteSpace(presetId) ? null : StackPresetsStore.Find(presetId);
+        if (preset == null)
+            return;
+
+        var stopped = 0;
+        foreach (var id in preset.ServiceIds.AsEnumerable().Reverse())
+        {
+            var service = FindService(id);
+            if (service == null || ServiceLocksStore.IsLocked(service.Id))
+                continue;
+
+            if (ProcessTreeKiller.FindRunningProcess(service, forceRefresh: true) == null)
+                continue;
+
+            ProcessTreeKiller.KillByService(service, RunSettingsStore.StopGracefulTimeoutMs);
+            _healthStatus[service.Id] = "unknown";
+            stopped++;
+        }
+
+        PushLog(new LogPayload
+        {
+            Level = stopped > 0 ? "warning" : "info",
+            Message = stopped > 0 ? $"Đã dừng {stopped} service trong stack «{preset.Name}»." : $"Stack «{preset.Name}» — không có service nào đang chạy."
+        });
+        RefreshAllStatuses();
+    }
+
+    private void SendConfigSecretScan()
+    {
+        var findings = ConfigSecretScanner.ScanServices(GetActiveServices());
+        _pushToUi(new BridgeResponse
+        {
+            Type = "configSecretScan",
+            Payload = findings.Select(f => new { f.ServiceName, f.FilePath, f.Reason })
+        });
+    }
+
+    private async Task PollHealthAsync(ServiceConfig service)
+    {
+        if (!ServiceHealthChecker.CanCheck(service))
+            return;
+
+        for (var i = 0; i < 15; i++)
+        {
+            await Task.Delay(2000).ConfigureAwait(false);
+            if (!service.IsRunning)
+            {
+                _healthStatus[service.Id] = "crashed";
+                PushServicesList();
+                return;
+            }
+
+            var status = await ServiceHealthChecker.CheckAsync(service).ConfigureAwait(false);
+            _healthStatus[service.Id] = status;
+            PushServicesList();
+
+            if (status is "healthy" or "unhealthy")
+            {
+                if (status == "unhealthy")
+                {
+                    PushLog(new LogPayload
+                    {
+                        ServiceId = service.Id,
+                        ServiceName = service.Name,
+                        Level = "warning",
+                        Message = $"{service.Name}: process chạy nhưng health check chưa OK ({service.Url})."
+                    });
+                }
+                return;
+            }
+        }
     }
 
     private static bool IsRunBlocked(ServiceConfig service) =>

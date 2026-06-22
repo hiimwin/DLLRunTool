@@ -660,6 +660,111 @@ body {
   animation: pulse 1.2s ease-in-out infinite;
 }
 
+.status-led.healthy {
+  background: var(--success);
+  box-shadow: 0 0 10px var(--success);
+}
+
+.status-led.unhealthy {
+  background: var(--warning);
+  box-shadow: 0 0 10px var(--warning);
+}
+
+.status-led.crashed {
+  background: var(--danger);
+  box-shadow: 0 0 10px var(--danger);
+  animation: pulse 0.8s ease-in-out infinite;
+}
+
+.status-led.starting-health {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.service-row-note {
+  font-size: 11px;
+  color: var(--warning);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stack-preset-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0 0 12px;
+  align-items: center;
+}
+
+.stack-preset-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+}
+
+.stack-preset-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.secret-banner {
+  border-color: var(--warning);
+  background: rgba(249, 171, 0, 0.12);
+}
+
+.console-search {
+  width: 160px;
+  max-width: 28vw;
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.dry-run-summary {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 8px 0 12px;
+  color: var(--text-secondary);
+}
+
+.dry-run-messages {
+  list-style: none;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  margin-bottom: 12px;
+}
+
+.dry-run-messages li {
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.dry-run-changed { color: var(--success); }
+.dry-run-unchanged { color: var(--text-muted); }
+.dry-run-skipped { color: var(--warning); }
+
+.update-bullet-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.update-bullet-list li { margin: 4px 0; }
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.75; }

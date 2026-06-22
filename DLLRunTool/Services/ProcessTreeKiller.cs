@@ -13,7 +13,7 @@ public static class ProcessTreeKiller
         return ProcessStatusCache.FindForService(service, forceRefresh);
     }
 
-    public static void KillProcessTree(Process? process)
+    public static void KillProcessTree(Process? process, int gracefulTimeoutMs = 0)
     {
         if (process == null)
             return;
@@ -21,7 +21,16 @@ public static class ProcessTreeKiller
         try
         {
             if (!process.HasExited)
+            {
+                if (gracefulTimeoutMs > 0)
+                {
+                    try { process.CloseMainWindow(); } catch { /* console apps */ }
+                    if (process.WaitForExit(gracefulTimeoutMs))
+                        return;
+                }
+
                 process.Kill(entireProcessTree: true);
+            }
         }
         catch
         {
@@ -31,17 +40,17 @@ public static class ProcessTreeKiller
         KillChildren(process.Id);
     }
 
-    public static void KillByService(Models.ServiceConfig service)
+    public static void KillByService(Models.ServiceConfig service, int gracefulTimeoutMs = 0)
     {
         var tracked = service.ManagedProcess;
         if (tracked != null && !tracked.HasExited)
-            KillProcessTree(tracked);
+            KillProcessTree(tracked, gracefulTimeoutMs);
 
         if (service.IsExe)
         {
             var found = FindRunningProcess(service);
             if (found != null)
-                KillProcessTree(found);
+                KillProcessTree(found, gracefulTimeoutMs);
         }
         else if (service.IsFrontEnd)
         {
@@ -54,7 +63,7 @@ public static class ProcessTreeKiller
                         cmd.Contains(service.FolderPath, StringComparison.OrdinalIgnoreCase) ||
                         (!string.IsNullOrEmpty(service.DllName) && cmd.Contains(service.DllName, StringComparison.OrdinalIgnoreCase))))
                     {
-                        KillProcessTree(proc);
+                        KillProcessTree(proc, gracefulTimeoutMs);
                     }
                 }
             }
@@ -63,7 +72,7 @@ public static class ProcessTreeKiller
         {
             var dotnet = FindDotnetProcess(service.DllName);
             if (dotnet != null)
-                KillProcessTree(dotnet);
+                KillProcessTree(dotnet, gracefulTimeoutMs);
         }
 
         service.ManagedProcess = null;

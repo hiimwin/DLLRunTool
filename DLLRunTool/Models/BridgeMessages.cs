@@ -48,6 +48,18 @@ public class BridgeRequest
 
     [JsonPropertyName("confirmed")]
     public bool? Confirmed { get; set; }
+
+    [JsonPropertyName("folderKind")]
+    public string? FolderKind { get; set; }
+
+    [JsonPropertyName("presetId")]
+    public string? PresetId { get; set; }
+
+    [JsonPropertyName("view")]
+    public string? View { get; set; }
+
+    [JsonPropertyName("logFilterServiceId")]
+    public string? LogFilterServiceId { get; set; }
 }
 
 public class ServiceUiConfig
@@ -117,6 +129,12 @@ public class ServiceStateDto
 
     [JsonPropertyName("isBuilding")]
     public bool IsBuilding { get; set; }
+
+    [JsonPropertyName("healthStatus")]
+    public string HealthStatus { get; set; } = "unknown";
+
+    [JsonPropertyName("notes")]
+    public string Notes { get; set; } = "";
 }
 
 public class ServiceDetailDto

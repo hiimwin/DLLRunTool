@@ -15,11 +15,16 @@
     workspace: null,
     logFilterServiceId: "",
     logHistory: [],
+    consoleSearch: "",
+    stackPresets: [],
     appVersion: "",
     updateInfo: null,
     lastBackupPreview: null,
     lastGlobalConfig: null
   };
+
+  const MAX_LOG_HISTORY = 2000;
+  let pendingImportPath = null;
 
   const $ = (id) => document.getElementById(id);
 
@@ -32,6 +37,10 @@
     backupView: $("backupView"),
     workspaceBanner: $("workspaceBanner"),
     workspaceBannerText: $("workspaceBannerText"),
+    secretScanBanner: $("secretScanBanner"),
+    secretScanBannerText: $("secretScanBannerText"),
+    btnDismissSecretScan: $("btnDismissSecretScan"),
+    stackPresetBar: $("stackPresetBar"),
     btnOpenWorkspace: $("btnOpenWorkspace"),
     workspacePathList: $("workspacePathList"),
     workspacePathsFile: $("workspacePathsFile"),
@@ -73,6 +82,10 @@
     consoleSection: $("consoleSection"),
     consoleResizeHandle: $("consoleResizeHandle"),
     consoleModeHint: $("consoleModeHint"),
+    consoleSearch: $("consoleSearch"),
+    btnCopyLog: $("btnCopyLog"),
+    importDryRunSummary: $("importDryRunSummary"),
+    importDryRunMessages: $("importDryRunMessages"),
     themeToggle: $("themeToggle"),
     langToggle: $("langToggle"),
     settingsModal: $("settingsModal"),
@@ -108,7 +121,57 @@
     btnDismissUpdate: $("btnDismissUpdate")
   };
 
-  let pendingImportPath = null;
+  function persistUiState() {
+    Bridge.send("saveUiState", {
+      view: state.view,
+      category: state.category,
+      platformId: state.platformId,
+      logFilterServiceId: state.logFilterServiceId || ""
+    });
+  }
+
+  function healthLedClass(svc) {
+    if (svc.isStarting && !svc.isRunning) return "starting";
+    if (!svc.isRunning) return "";
+    const h = (svc.healthStatus || "").toLowerCase();
+    if (h === "healthy") return "running healthy";
+    if (h === "unhealthy") return "running unhealthy";
+    if (h === "crashed") return "crashed";
+    if (h === "starting") return "running starting-health";
+    return "running";
+  }
+
+  function showSecretBanner(findings) {
+    if (!els.secretScanBanner || !findings?.length) {
+      els.secretScanBanner?.classList.add("hidden");
+      return;
+    }
+    if (localStorage.getItem("mcp-secret-banner-dismissed") === "1") return;
+    els.secretScanBannerText.textContent = t("secret.banner", { count: findings.length });
+    els.secretScanBanner.classList.remove("hidden");
+  }
+
+  function renderStackPresets() {
+    if (!els.stackPresetBar) return;
+    const presets = state.stackPresets || [];
+    if (!presets.length) {
+      els.stackPresetBar.innerHTML = "";
+      return;
+    }
+    els.stackPresetBar.innerHTML = presets.map((p) => `
+      <span class="stack-preset-group">
+        <span class="stack-preset-label">${escapeHtml(p.name)}</span>
+        <button type="button" class="btn ghost small stack-btn" data-preset-run="${escapeAttr(p.id)}">${escapeHtml(t("stack.run"))}</button>
+        <button type="button" class="btn ghost small stack-btn" data-preset-stop="${escapeAttr(p.id)}">${escapeHtml(t("stack.stop"))}</button>
+      </span>
+    `).join("");
+    els.stackPresetBar.querySelectorAll("[data-preset-run]").forEach((btn) => {
+      btn.onclick = () => Bridge.send("runStackPreset", { presetId: btn.dataset.presetRun, platformId: state.platformId });
+    });
+    els.stackPresetBar.querySelectorAll("[data-preset-stop]").forEach((btn) => {
+      btn.onclick = () => Bridge.send("stopStackPreset", { presetId: btn.dataset.presetStop, platformId: state.platformId });
+    });
+  }
 
   function showAppDialog({ title, message, buttons }) {
     const overlay = $("appDialog");
@@ -175,16 +238,24 @@
   function showUpdateBanner(info) {
     if (!els.updateBanner || !info?.isUpdateAvailable) return;
 
+    const dismissedUntil = localStorage.getItem("mcp-update-dismissed-until");
+    if (dismissedUntil && Date.now() < parseInt(dismissedUntil, 10)) return;
+
     const dismissed = localStorage.getItem("mcp-update-dismissed-version");
     if (dismissed && dismissed === info.latestVersion) return;
 
     state.updateInfo = info;
     if (els.updateBannerMessage) {
-      els.updateBannerMessage.textContent = t("update.message", {
-        current: info.currentVersion,
-        latest: info.latestVersion,
-        notes: info.releaseNotes ? ` — ${info.releaseNotes}` : ""
-      });
+      const bullets = (info.releaseNotesBullets || []).filter(Boolean);
+      const bulletHtml = bullets.length
+        ? `<ul class="update-bullet-list">${bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>`
+        : "";
+      els.updateBannerMessage.innerHTML =
+        escapeHtml(t("update.message", {
+          current: info.currentVersion,
+          latest: info.latestVersion,
+          notes: info.releaseNotes && !bullets.length ? ` — ${info.releaseNotes}` : ""
+        })) + bulletHtml;
     }
     if (els.btnDownloadUpdate) {
       els.btnDownloadUpdate.disabled = !info.downloadUrl;
@@ -193,8 +264,14 @@
     els.updateBanner.classList.remove("hidden");
   }
 
-  function hideUpdateBanner(dismissForVersion) {
-    if (dismissForVersion && state.updateInfo?.latestVersion) {
+  function hideUpdateBanner(dismissForVersion, dismissForMonth = false) {
+    if (dismissForMonth) {
+      const end = new Date();
+      end.setMonth(end.getMonth() + 1);
+      end.setDate(1);
+      end.setHours(0, 0, 0, 0);
+      localStorage.setItem("mcp-update-dismissed-until", String(end.getTime()));
+    } else if (dismissForVersion && state.updateInfo?.latestVersion) {
       localStorage.setItem("mcp-update-dismissed-version", state.updateInfo.latestVersion);
     }
     els.updateBanner?.classList.add("hidden");
@@ -283,6 +360,7 @@
     state.platformId = platformId;
     renderPlatforms();
     Bridge.send("selectPlatform", { platformId });
+    persistUiState();
     if (state.view === "global") loadGlobalConfig();
     if (state.view === "backup") loadBackupPreview();
   }
@@ -290,7 +368,7 @@
   function renderDashboard() {
     const list = getActiveServices();
     const signature = list.map((s) => s.id).join(",");
-    const statusSig = list.map((s) => `${s.id}:${s.isRunning ? 1 : 0}:${s.isLocked ? 1 : 0}:${s.isRunProtected ? 1 : 0}:${s.isStarting ? 1 : 0}:${s.isBuilding ? 1 : 0}`).join(",");
+    const statusSig = list.map((s) => `${s.id}:${s.isRunning ? 1 : 0}:${s.isLocked ? 1 : 0}:${s.isRunProtected ? 1 : 0}:${s.isStarting ? 1 : 0}:${s.isBuilding ? 1 : 0}:${s.healthStatus || ""}`).join(",");
     const hasRows = !!els.dashboardList.querySelector("[data-service-id]");
 
     if (signature === state.dashboardSig && hasRows) {
@@ -316,10 +394,11 @@
       row.className = `service-row${isRunBlocked(svc) ? " service-row-protected" : ""}`;
       row.dataset.serviceId = svc.id;
       row.innerHTML = `
-        <span class="status-led${svc.isRunning ? " running" : ""}${svc.isStarting && !svc.isRunning ? " starting" : ""}"></span>
+        <span class="status-led ${healthLedClass(svc)}"></span>
         <div class="service-row-info">
           <div class="service-row-name">${escapeHtml(displayName)}</div>
-          <div class="service-row-sub">${escapeHtml(svc.name)}${svc.url ? " · " + escapeHtml(svc.url) : ""}${svc.isStarting ? " · " + escapeHtml(t("dashboard.starting")) : ""}</div>
+          <div class="service-row-sub">${escapeHtml(svc.name)}${svc.url ? " · " + escapeHtml(svc.url) : ""}${svc.isStarting ? " · " + escapeHtml(t("dashboard.starting")) : ""}${svc.healthStatus && svc.isRunning ? " · " + escapeHtml(t("health." + svc.healthStatus, svc.healthStatus)) : ""}</div>
+          ${svc.notes ? `<div class="service-row-note" title="${escapeAttr(svc.notes)}">${escapeHtml(svc.notes)}</div>` : ""}
           <div class="build-progress hidden" data-build-progress="${escapeAttr(svc.id)}">
             <div class="build-progress-track">
               <div class="build-progress-fill"></div>
@@ -337,6 +416,12 @@
           <button class="row-btn secondary" data-action="logs" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("log.viewService"))}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
             ${escapeHtml(t("btn.log"))}
+          </button>
+          <button class="row-btn icon-only" data-action="openProject" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.openProject"))}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </button>
+          <button class="row-btn icon-only" data-action="openCmd" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.openCmd"))}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
           </button>
           <button class="row-btn icon-only lock-btn${svc.isLocked ? " locked" : ""}" data-action="lock" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(svc.isLocked ? t("lock.locked") : t("lock.unlocked"))}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -367,14 +452,14 @@
       if (!row) return;
       const led = row.querySelector(".status-led");
       if (led) {
-        led.classList.toggle("running", !!svc.isRunning);
-        led.classList.toggle("starting", !!svc.isStarting && !svc.isRunning);
+        led.className = `status-led ${healthLedClass(svc)}`;
       }
 
       const sub = row.querySelector(".service-row-sub");
       if (sub) {
         const base = `${svc.name}${svc.url ? " · " + svc.url : ""}`;
-        sub.textContent = svc.isStarting ? `${base} · ${t("dashboard.starting")}` : base;
+        const health = svc.healthStatus && svc.isRunning ? ` · ${t("health." + svc.healthStatus, svc.healthStatus)}` : "";
+        sub.textContent = svc.isStarting ? `${base} · ${t("dashboard.starting")}` : base + health;
       }
 
       const actions = row.querySelector(".service-row-actions");
@@ -413,7 +498,8 @@
 
   async function handleRowAction(action, serviceId) {
     const svc = findServiceInState(serviceId);
-    if (action !== "stop" && action !== "lock" && action !== "logs" && action !== "settings" && isServiceBusy(svc)) {
+    if (action !== "stop" && action !== "lock" && action !== "logs" && action !== "settings"
+        && action !== "openProject" && action !== "openCmd" && action !== "openBin" && isServiceBusy(svc)) {
       return;
     }
 
@@ -463,6 +549,15 @@
         });
         break;
       }
+      case "openProject":
+        Bridge.send("openFolder", { ...payload, folderKind: "project" });
+        break;
+      case "openBin":
+        Bridge.send("openFolder", { ...payload, folderKind: "bin" });
+        break;
+      case "openCmd":
+        Bridge.send("openCmdAtProject", payload);
+        break;
       case "lock": {
         const current = getActiveServices().find((s) => s.id === serviceId);
         const nextLocked = !(current && current.isLocked);
@@ -555,13 +650,23 @@
   }
 
   function matchesLogFilter(payload, filterId) {
-    if (!filterId) return true;
-    if (!payload.serviceId) return true;
-    return payload.serviceId === filterId;
+    if (filterId) {
+      if (payload.serviceId && payload.serviceId !== filterId)
+        return false;
+    }
+
+    const q = (state.consoleSearch || "").trim().toLowerCase();
+    if (!q)
+      return true;
+
+    const hay = `${payload.message || ""} ${payload.serviceName || ""} ${payload.level || ""}`.toLowerCase();
+    return hay.includes(q);
   }
 
   function pushLogHistory(payload) {
     state.logHistory.push(payload);
+    if (state.logHistory.length > MAX_LOG_HISTORY)
+      state.logHistory.splice(0, state.logHistory.length - MAX_LOG_HISTORY);
   }
 
   function resolveLogLevel(payload) {
@@ -691,7 +796,7 @@
     }
   }
 
-  function switchView(view) {
+  function switchView(view, silent = false) {
     state.view = view;
     document.querySelectorAll(".view-tab").forEach((t) => {
       t.classList.toggle("active", t.dataset.view === view);
@@ -704,6 +809,7 @@
     if (view === "backup") loadBackupPreview();
     if (view === "workspace") loadWorkspacePaths();
     updateNavContext();
+    if (!silent) persistUiState();
   }
 
   function loadWorkspacePaths() {
@@ -824,6 +930,25 @@
     });
   }
 
+  function restoreUiState(uiState) {
+    if (!uiState) return;
+    if (uiState.platformId && state.platforms.some((p) => p.id === uiState.platformId)) {
+      state.platformId = uiState.platformId;
+    }
+    if (uiState.category === "BE" || uiState.category === "FE") {
+      state.category = uiState.category;
+      document.querySelectorAll(".category-tab").forEach((tab) => {
+        tab.classList.toggle("active", tab.dataset.category === state.category);
+      });
+    }
+    if (uiState.view) {
+      switchView(uiState.view, true);
+    }
+    if (uiState.logFilterServiceId) {
+      setLogFilterValue(uiState.logFilterServiceId, findServiceName(uiState.logFilterServiceId), true);
+    }
+  }
+
   function showImportPreview(preview) {
     pendingImportPath = preview.filePath;
     els.importPreview.classList.remove("hidden");
@@ -836,12 +961,60 @@
       li.innerHTML = `<strong>${escapeHtml(svc.name)}</strong> (${escapeHtml(svc.type)}) — ${escapeHtml((svc.files || []).join(", "))}`;
       els.importPreviewList.appendChild(li);
     });
+
+    const dry = preview.dryRunMessages || preview.DryRunMessages || [];
+    const changed = preview.dryRunChangedCount ?? preview.DryRunChangedCount ?? 0;
+    const unchanged = preview.dryRunUnchangedCount ?? preview.DryRunUnchangedCount ?? 0;
+    const skipped = preview.dryRunSkippedCount ?? preview.DryRunSkippedCount ?? 0;
+    if (els.importDryRunSummary) {
+      if (dry.length) {
+        els.importDryRunSummary.classList.remove("hidden");
+        els.importDryRunSummary.textContent = t("backup.dryRunSummary", { changed, unchanged, skipped });
+      } else {
+        els.importDryRunSummary.classList.add("hidden");
+      }
+    }
+    if (els.importDryRunMessages) {
+      els.importDryRunMessages.innerHTML = "";
+      if (dry.length) {
+        els.importDryRunMessages.classList.remove("hidden");
+        dry.forEach((msg) => {
+          const li = document.createElement("li");
+          li.className = dryRunClass(msg);
+          li.textContent = msg;
+          els.importDryRunMessages.appendChild(li);
+        });
+      } else {
+        els.importDryRunMessages.classList.add("hidden");
+      }
+    }
+  }
+
+  function dryRunClass(msg) {
+    if (msg.startsWith("[Đã đổi]")) return "dry-run-changed";
+    if (msg.startsWith("[Giữ nguyên]")) return "dry-run-unchanged";
+    if (msg.startsWith("Bỏ qua")) return "dry-run-skipped";
+    return "";
   }
 
   function hideImportPreview() {
     pendingImportPath = null;
     els.importPreview.classList.add("hidden");
     els.importPreviewList.innerHTML = "";
+    els.importDryRunMessages?.classList.add("hidden");
+    els.importDryRunSummary?.classList.add("hidden");
+  }
+
+  function copyConsoleLog() {
+    const filterId = state.logFilterServiceId || "";
+    const entries = state.logHistory.filter((e) => matchesLogFilter(e, filterId)).slice(-50);
+    const text = entries.map((e) => {
+      const svc = e.serviceName ? `[${e.serviceName}] ` : "";
+      return `[${e.timestamp || ""}] ${svc}${e.message || ""}`;
+    }).join("\n");
+    navigator.clipboard?.writeText(text).then(() => {
+      appendLog({ level: "info", message: t("console.copied", { count: entries.length }) });
+    }).catch(() => {});
   }
 
   function loadGlobalConfig() {
@@ -1058,6 +1231,7 @@
       tab.classList.add("active");
       state.category = tab.dataset.category;
       updateNavContext();
+      persistUiState();
       renderDashboard();
       if (state.view === "global") loadGlobalConfig();
     });
@@ -1269,6 +1443,25 @@
   if (els.btnDismissUpdate) {
     els.btnDismissUpdate.onclick = () => hideUpdateBanner(true);
   }
+  const btnDismissUpdateMonth = $("btnDismissUpdateMonth");
+  if (btnDismissUpdateMonth) {
+    btnDismissUpdateMonth.onclick = () => hideUpdateBanner(false, true);
+  }
+  if (els.btnDismissSecretScan) {
+    els.btnDismissSecretScan.onclick = () => {
+      localStorage.setItem("mcp-secret-banner-dismissed", "1");
+      els.secretScanBanner?.classList.add("hidden");
+    };
+  }
+  if (els.consoleSearch) {
+    els.consoleSearch.oninput = () => {
+      state.consoleSearch = els.consoleSearch.value;
+      renderConsoleLogs();
+    };
+  }
+  if (els.btnCopyLog) {
+    els.btnCopyLog.onclick = copyConsoleLog;
+  }
 
   els.btnSaveWorkspace.onclick = () => {
     Bridge.send("saveWorkspacePaths", { paths: collectWorkspacePaths() });
@@ -1287,6 +1480,10 @@
       renderWorkspaceBanner(payload.workspace);
     }
     if (payload.runSettings) applyRunSettings(payload.runSettings);
+    if (payload.uiState) restoreUiState(payload.uiState);
+    state.stackPresets = payload.stackPresets || [];
+    renderStackPresets();
+    showSecretBanner(payload.configSecretFindings);
     renderPlatforms();
     applyTheme();
     initConsoleResize();

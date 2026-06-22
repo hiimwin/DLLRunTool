@@ -1,0 +1,33 @@
+[
+  {
+    "id": "dev-core",
+    "name": "Dev core",
+    "serviceIds": [
+      "loyalty-redis",
+      "loyalty-authserver",
+      "loyalty-webgateway",
+      "loyalty-identity",
+      "loyalty-saas",
+      "loyalty-administration"
+    ]
+  },
+  {
+    "id": "dev-full-be",
+    "name": "Dev full BE",
+    "serviceIds": [
+      "loyalty-redis",
+      "loyalty-authserver",
+      "loyalty-webgateway",
+      "loyalty-identity",
+      "loyalty-saas",
+      "loyalty-administration",
+      "loyalty-masterdata",
+      "loyalty-member",
+      "loyalty-customerjourney",
+      "loyalty-product",
+      "loyalty-segment",
+      "loyalty-transaction",
+      "loyalty-syncdata"
+    ]
+  }
+]

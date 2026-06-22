@@ -20,6 +20,12 @@ public class ServiceConfig
     /// <summary>Khoá mặc định — phải mở khóa + xác nhận mới được Run (vd. DbMigrator).</summary>
     public bool RunProtected { get; set; }
 
+    /// <summary>Ghi chú hiển thị trên dashboard (VPN, port, cảnh báo...).</summary>
+    public string Notes { get; set; } = "";
+
+    /// <summary>Đường health tùy chọn (mặc định thử /health).</summary>
+    public string HealthPath { get; set; } = "";
+
     [JsonIgnore]
     public Process? ManagedProcess { get; set; }
 

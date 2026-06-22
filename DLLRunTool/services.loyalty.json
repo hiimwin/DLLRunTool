@@ -6,7 +6,8 @@
     "FolderPath": "{{redisPath}}",
     "DllName": "redis-server.exe",
     "Url": "",
-    "IsExe": true
+    "IsExe": true,
+    "Notes": "Chạy redis-server.exe — cần path Redis trong workspace"
   },
   {
     "Id": "loyalty-authserver",
@@ -16,7 +17,8 @@
     "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\apps\\auth-server\\src\\AKC.Products.AuthServer",
     "DllName": "AKC.Products.AuthServer.dll",
     "Url": "https://localhost:44322",
-    "IsExe": false
+    "IsExe": false,
+    "Notes": "Auth/OAuth — chạy trước các microservice BE"
   },
   {
     "Id": "loyalty-webgateway",
@@ -220,6 +222,7 @@
     "DllName": "AKC.Products.DbMigrator.dll",
     "Url": "",
     "IsExe": false,
-    "RunProtected": true
+    "RunProtected": true,
+    "Notes": "Chỉ chạy khi migrate DB — mặc định khóa Run"
   }
 ]

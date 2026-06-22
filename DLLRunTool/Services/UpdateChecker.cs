@@ -11,6 +11,7 @@ public sealed class UpdateCheckResult
     public string LatestVersion { get; init; } = "";
     public string DownloadUrl { get; init; } = "";
     public string ReleaseNotes { get; init; } = "";
+    public IReadOnlyList<string> ReleaseNotesBullets { get; init; } = [];
     public string ReleasedAt { get; init; } = "";
     public bool IsUpdateAvailable { get; init; }
 }
@@ -50,12 +51,14 @@ public static class UpdateChecker
                 return null;
 
             var isNewer = IsRemoteVersionNewer(current, manifest.Version);
+            var notes = manifest.ReleaseNotes?.Trim() ?? "";
             return new UpdateCheckResult
             {
                 CurrentVersion = current,
                 LatestVersion = manifest.Version.Trim(),
                 DownloadUrl = manifest.DownloadUrl?.Trim() ?? "",
-                ReleaseNotes = manifest.ReleaseNotes?.Trim() ?? "",
+                ReleaseNotes = notes,
+                ReleaseNotesBullets = SplitReleaseNotes(notes),
                 ReleasedAt = manifest.ReleasedAt?.Trim() ?? "",
                 IsUpdateAvailable = isNewer
             };
@@ -86,5 +89,17 @@ public static class UpdateChecker
             2 => $"{parts[0]}.{parts[1]}.0",
             _ => value.Trim()
         };
+    }
+
+    private static IReadOnlyList<string> SplitReleaseNotes(string notes)
+    {
+        if (string.IsNullOrWhiteSpace(notes))
+            return [];
+
+        return notes
+            .Split([';', '\n', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(s => s.Length > 0)
+            .Take(8)
+            .ToList();
     }
 }

@@ -9,6 +9,16 @@ public static class RunSettingsStore
     private static bool _showConsoleWindow;
     private static bool _showConsoleSelected;
     private static string? _consoleSelectedServiceId;
+    private static int _stopGracefulTimeoutMs = 5000;
+
+    public static int StopGracefulTimeoutMs
+    {
+        get
+        {
+            EnsureLoaded();
+            return _stopGracefulTimeoutMs;
+        }
+    }
 
     public static bool ShowConsoleWindow
     {
@@ -79,6 +89,8 @@ public static class RunSettingsStore
                 _showConsoleSelected = sel.GetBoolean();
             if (doc.RootElement.TryGetProperty("consoleSelectedServiceId", out var sid))
                 _consoleSelectedServiceId = sid.GetString();
+            if (doc.RootElement.TryGetProperty("stopGracefulTimeoutMs", out var timeout) && timeout.TryGetInt32(out var ms))
+                _stopGracefulTimeoutMs = Math.Clamp(ms, 0, 30000);
         }
         catch
         {
@@ -94,7 +106,8 @@ public static class RunSettingsStore
         {
             showConsoleWindow = _showConsoleWindow,
             showConsoleSelected = _showConsoleSelected,
-            consoleSelectedServiceId = _consoleSelectedServiceId
+            consoleSelectedServiceId = _consoleSelectedServiceId,
+            stopGracefulTimeoutMs = _stopGracefulTimeoutMs
         }, JsonOptions);
         File.WriteAllText(FilePath, json);
     }

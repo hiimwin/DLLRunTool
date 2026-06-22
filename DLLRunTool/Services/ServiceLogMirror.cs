@@ -8,6 +8,7 @@ namespace DLLRunTool.Services;
 /// </summary>
 public static class ServiceLogMirror
 {
+    private const int MaxLogFileBytes = 5 * 1024 * 1024;
     private static readonly object Gate = new();
     private static readonly Dictionary<string, MirrorSession> Sessions = new(StringComparer.OrdinalIgnoreCase);
 
@@ -41,6 +42,7 @@ public static class ServiceLogMirror
 
         try
         {
+            RotateIfNeeded(session.LogPath);
             File.AppendAllText(session.LogPath, line + Environment.NewLine, Encoding.UTF8);
         }
         catch
@@ -149,6 +151,39 @@ public static class ServiceLogMirror
 
         foreach (var id in ids)
             CloseMirror(id);
+    }
+
+    private static void RotateIfNeeded(string logPath)
+    {
+        try
+        {
+            if (!File.Exists(logPath))
+                return;
+
+            var info = new FileInfo(logPath);
+            if (info.Length < MaxLogFileBytes)
+                return;
+
+            var archive = logPath + $".{DateTime.Now:yyyyMMdd-HHmmss}.old";
+            File.Move(logPath, archive, overwrite: true);
+            File.WriteAllText(logPath, $"=== rotated {DateTime.Now:yyyy-MM-dd HH:mm:ss} ==={Environment.NewLine}", Encoding.UTF8);
+
+            var dir = Path.GetDirectoryName(logPath);
+            if (string.IsNullOrEmpty(dir))
+                return;
+
+            foreach (var old in Directory.EnumerateFiles(dir, $"{Path.GetFileNameWithoutExtension(logPath)}.*.old")
+                         .Select(f => new FileInfo(f))
+                         .OrderByDescending(f => f.LastWriteTimeUtc)
+                         .Skip(3))
+            {
+                try { old.Delete(); } catch { /* ignore */ }
+            }
+        }
+        catch
+        {
+            // ignore rotation errors
+        }
     }
 
     private static string SanitizeFileName(string value)

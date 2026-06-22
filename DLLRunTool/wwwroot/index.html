@@ -65,12 +65,18 @@
             <button class="btn primary small" id="btnDownloadUpdate" data-i18n="update.now">Cập nhật ngay</button>
             <button class="btn ghost small" id="btnCheckUpdate" data-i18n="update.check">Kiểm tra lại</button>
             <button class="btn ghost small" id="btnDismissUpdate" data-i18n="update.later">Để sau</button>
+            <button class="btn ghost small" id="btnDismissUpdateMonth" data-i18n="update.laterMonth">Bỏ qua tháng này</button>
           </div>
         </div>
 
         <div class="workspace-banner hidden" id="workspaceBanner">
           <span id="workspaceBannerText"></span>
           <button class="btn ghost small" id="btnOpenWorkspace" data-i18n="workspace.openPaths">Cấu hình đường dẫn</button>
+        </div>
+
+        <div class="workspace-banner secret-banner hidden" id="secretScanBanner">
+          <span id="secretScanBannerText"></span>
+          <button class="btn ghost small" id="btnDismissSecretScan" data-i18n="secret.dismiss">Ẩn</button>
         </div>
 
         <section class="view-panel" id="dashboardView">
@@ -85,6 +91,7 @@
                 Tải lại
               </button>
             </div>
+            <div class="stack-preset-bar" id="stackPresetBar"></div>
             <p class="section-desc dashboard-hint" data-i18n="dashboard.hint">Thêm dòng vào services.loyalty.json → lưu file → danh sách tự cập nhật</p>
             <div class="dashboard-list" id="dashboardList"></div>
           </div>
@@ -198,7 +205,9 @@
             <div class="import-preview hidden" id="importPreview">
               <h3 data-i18n="backup.previewTitle">Xem trước Import</h3>
               <p class="preview-meta" id="importPreviewMeta"></p>
+              <div class="dry-run-summary hidden" id="importDryRunSummary"></div>
               <ul class="preview-service-list" id="importPreviewList"></ul>
+              <ul class="dry-run-messages hidden" id="importDryRunMessages"></ul>
               <div class="action-bar">
                 <button class="btn success" id="btnApplyImport"><span data-i18n="backup.applyImport">Apply vào Source</span></button>
                 <button class="btn ghost" id="btnCancelImport" data-i18n="backup.cancel">Hủy</button>
@@ -219,6 +228,7 @@
           <div class="console-header">
             <div class="console-header-left">
               <span data-i18n="console.title">Console Log</span>
+              <input type="search" class="console-search" id="consoleSearch" data-i18n-placeholder="console.searchPlaceholder" placeholder="Tìm trong log..." />
               <div class="log-filter" id="logFilter">
                 <button type="button" class="log-filter-btn" id="logFilterBtn" data-i18n-title="console.filterTitle" title="Filter">
                   <span id="logFilterLabel" data-i18n="console.allServices">Tất cả service</span>
@@ -239,6 +249,7 @@
                 </label>
               </div>
               <button class="btn ghost small" id="btnStopAll" data-i18n="console.stopAll" data-i18n-title="console.stopAllTitle" title="Stop All">Stop All</button>
+              <button class="btn ghost small" id="btnCopyLog" data-i18n="console.copyLog">Copy log</button>
               <button class="btn ghost small" id="btnClearLog" data-i18n="console.clear">Clear</button>
             </div>
           </div>

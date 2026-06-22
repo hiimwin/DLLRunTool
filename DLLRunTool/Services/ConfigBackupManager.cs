@@ -74,7 +74,7 @@ public static class ConfigBackupManager
 
         foreach (var service in services)
         {
-            package.Services.Add(await CreateServiceEntryAsync(service, ct).ConfigureAwait(false));
+            package.Services.Add(await CreateServiceEntryAsync(service, preserveFull, ct).ConfigureAwait(false));
         }
 
         return package;
@@ -89,7 +89,7 @@ public static class ConfigBackupManager
         return await CreateBackupAsync(platformId, platformName, services, "local-scan", ct).ConfigureAwait(false);
     }
 
-    private static async Task<ServiceBackupEntry> CreateServiceEntryAsync(ServiceConfig service, CancellationToken ct)
+    private static async Task<ServiceBackupEntry> CreateServiceEntryAsync(ServiceConfig service, bool preserveFull, CancellationToken ct)
     {
         var entry = new ServiceBackupEntry
         {
@@ -104,7 +104,18 @@ public static class ConfigBackupManager
             if (!File.Exists(path))
                 continue;
 
+            if (!preserveFull && key.Contains("secrets", StringComparison.OrdinalIgnoreCase))
+                continue;
+
             var content = await File.ReadAllTextAsync(path, ct).ConfigureAwait(false);
+
+            if (!preserveFull)
+            {
+                if (key.StartsWith("appsettings", StringComparison.OrdinalIgnoreCase))
+                    content = ConfigSecretsHelper.SanitizeAppSettingsForBackup(content);
+                else if (key.Equals("env.js", StringComparison.OrdinalIgnoreCase))
+                    content = SanitizeEnvJsForExport(content);
+            }
 
             entry.ConfigFiles[key] = content;
             entry.ConfigFilePaths[key] = path;
@@ -184,6 +195,7 @@ public static class ConfigBackupManager
         ConfigBackupPackage package,
         string targetPlatformId,
         IReadOnlyList<ServiceConfig> services,
+        bool dryRun = false,
         CancellationToken ct = default)
     {
         var result = new ImportResultDto();
@@ -236,7 +248,8 @@ public static class ConfigBackupManager
                 }
             }
 
-            await File.WriteAllTextAsync(path, writeContent, ct).ConfigureAwait(false);
+            if (!dryRun)
+                await File.WriteAllTextAsync(path, writeContent, ct).ConfigureAwait(false);
             result.Messages.Add($"[Đã đổi] Global → {Path.GetFileName(path)}");
             result.AppliedCount++;
             result.ChangedCount++;
@@ -259,10 +272,12 @@ public static class ConfigBackupManager
             var files = GetEffectiveConfigFiles(entry);
             if (files.Count == 0 && entry.ParsedConfig != null)
             {
-                await ConfigFileManager.SaveConfigAsync(service, entry.ParsedConfig, ct).ConfigureAwait(false);
+                if (!dryRun)
+                    await ConfigFileManager.SaveConfigAsync(service, entry.ParsedConfig, ct).ConfigureAwait(false);
                 result.AppliedCount++;
                 result.ChangedCount++;
-                affectedServices.Add(service);
+                if (!dryRun)
+                    affectedServices.Add(service);
                 result.Messages.Add($"[Đã đổi] {entry.Name} (parsed config → appsettings/launchSettings)");
                 continue;
             }
@@ -307,7 +322,8 @@ public static class ConfigBackupManager
 
                 if (key.Equals("appsettings.json", StringComparison.OrdinalIgnoreCase))
                 {
-                    await ConfigFileManager.WriteAppSettingsToSourceAsync(targetPath, content, ct).ConfigureAwait(false);
+                    if (!dryRun)
+                        await ConfigFileManager.WriteAppSettingsToSourceAsync(targetPath, content, ct).ConfigureAwait(false);
                 }
                 else if (key.Equals("appsettings.secrets.json", StringComparison.OrdinalIgnoreCase))
                 {
@@ -319,20 +335,24 @@ public static class ConfigBackupManager
                         continue;
                     }
 
-                    await ConfigFileManager.MergeSecretsFileIntoAppSettingsAsync(appsettingsPath, content, ct).ConfigureAwait(false);
+                    if (!dryRun)
+                        await ConfigFileManager.MergeSecretsFileIntoAppSettingsAsync(appsettingsPath, content, ct).ConfigureAwait(false);
                     result.AppliedCount++;
                     result.ChangedCount++;
-                    affectedServices.Add(service);
+                    if (!dryRun)
+                        affectedServices.Add(service);
                     result.Messages.Add($"[Đã đổi] {entry.Name} → gộp {key} vào appsettings.json");
                     continue;
                 }
                 else
                 {
-                    await File.WriteAllTextAsync(targetPath, content, ct).ConfigureAwait(false);
+                    if (!dryRun)
+                        await File.WriteAllTextAsync(targetPath, content, ct).ConfigureAwait(false);
                 }
                 result.AppliedCount++;
                 result.ChangedCount++;
-                affectedServices.Add(service);
+                if (!dryRun)
+                    affectedServices.Add(service);
                 result.Messages.Add($"[Đã đổi] {entry.Name} → {key} ({targetPath})");
 
                 if (key.Equals("ocelot.localhost.json", StringComparison.OrdinalIgnoreCase))
@@ -343,24 +363,43 @@ public static class ConfigBackupManager
             }
         }
 
-        foreach (var service in affectedServices.Where(s => !s.IsExe && !s.IsFrontEnd))
+        if (!dryRun)
         {
-            try
+            foreach (var service in affectedServices.Where(s => !s.IsExe && !s.IsFrontEnd))
             {
-                var copied = await ConfigFileManager.SyncSourceConfigToOutputAsync(service, ct).ConfigureAwait(false);
-                if (copied > 0)
+                try
                 {
-                    result.Messages.Add(
-                        $"[Sync bin] {service.Name}: {copied} file → {service.ResolveRunWorkingDirectory()}");
+                    var copied = await ConfigFileManager.SyncSourceConfigToOutputAsync(service, ct).ConfigureAwait(false);
+                    if (copied > 0)
+                    {
+                        result.Messages.Add(
+                            $"[Sync bin] {service.Name}: {copied} file → {service.ResolveRunWorkingDirectory()}");
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                result.Messages.Add($"[Cảnh báo] Sync bin {service.Name}: {ex.Message}");
+                catch (Exception ex)
+                {
+                    result.Messages.Add($"[Cảnh báo] Sync bin {service.Name}: {ex.Message}");
+                }
             }
         }
 
         return result;
+    }
+
+    private static string SanitizeEnvJsForExport(string content)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(
+            content,
+            @"window\s*\[\s*""env""\s*\]\s*\[\s*""(?<key>[^""]+)""\s*\]\s*=\s*""(?<val>(?:\\.|[^""])*)""",
+            m =>
+            {
+                var key = m.Groups["key"].Value;
+                if (key.Contains("PASSWORD", StringComparison.OrdinalIgnoreCase) ||
+                    key.Contains("SECRET", StringComparison.OrdinalIgnoreCase) ||
+                    key.Contains("TOKEN", StringComparison.OrdinalIgnoreCase))
+                    return $@"window[""env""][""{key}""] = ""***""";
+                return m.Value;
+            });
     }
 
     private static string? ResolveApplyTargetPath(ServiceConfig service, string key) =>

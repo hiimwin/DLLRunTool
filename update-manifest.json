@@ -1,6 +1,6 @@
 ﻿{
-    "version":  "1.1.0",
+    "version":  "1.2.0",
     "releasedAt":  "2026-06-22",
-    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.1.0/Win_Trung-MicroservicesControlPanel.zip",
-    "releaseNotes":  "Console log moi tab; log loi/canh bao mau; CMD tat ca vs CMD dang chon"
+    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.0/Win_Trung-MicroservicesControlPanel.zip",
+    "releaseNotes":  "Health check; dev stack preset; UI state; open folder/CMD; dry-run backup; secret banner; graceful stop; log rotation; export sanitize; notes; console search/copy; update bullets"
 }

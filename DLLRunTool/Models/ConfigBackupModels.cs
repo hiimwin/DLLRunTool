@@ -60,6 +60,10 @@ public class ImportPreviewDto
     public int ConfigFileCount { get; set; }
     public List<ImportServicePreviewDto> Services { get; set; } = [];
     public bool IsLocalDefaults { get; set; }
+    public int DryRunChangedCount { get; set; }
+    public int DryRunUnchangedCount { get; set; }
+    public int DryRunSkippedCount { get; set; }
+    public List<string> DryRunMessages { get; set; } = [];
 }
 
 public class ImportServicePreviewDto
