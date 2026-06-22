@@ -1,6 +1,6 @@
 ﻿{
-    "version":  "1.2.1",
+    "version":  "1.2.2",
     "releasedAt":  "2026-06-22",
-    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.1/Win_Trung-MicroservicesControlPanel.zip",
-    "releaseNotes":  "Redis log trong console tool (khong mo CMD rieng); health check chi cho HTTP services; sua layout nut service"
+    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.2/Win_Trung-MicroservicesControlPanel.zip",
+    "releaseNotes":  "Bo note AuthServer; can thang cot nut service (Redis khop DLL); grid co dinh Build/Run/icon"
 }

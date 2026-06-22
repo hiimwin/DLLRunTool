@@ -17,8 +17,7 @@
     "ProjectPath": "{{loyaltyRoot}}\\loyalty-platform\\apps\\auth-server\\src\\AKC.Products.AuthServer",
     "DllName": "AKC.Products.AuthServer.dll",
     "Url": "https://localhost:44322",
-    "IsExe": false,
-    "Notes": "Auth/OAuth — chạy trước các microservice BE"
+    "IsExe": false
   },
   {
     "Id": "loyalty-webgateway",

@@ -817,17 +817,37 @@ body {
 
 .service-row-actions-main,
 .service-row-actions-tools {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 6px;
   flex-shrink: 0;
 }
 
+.service-row-actions-main {
+  display: grid;
+  grid-template-columns: 88px 92px 36px;
+  gap: 6px;
+  align-items: center;
+}
+
+.service-row-actions-main > .row-btn {
+  width: 100%;
+  min-width: 0;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
 .service-row-actions-tools {
+  display: grid;
+  grid-template-columns: repeat(5, 36px);
   gap: 4px;
+  align-items: center;
   padding-left: 8px;
   border-left: 1px solid var(--border);
+}
+
+.service-row-actions-tools > .row-btn {
+  width: 100%;
+  min-width: 0;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .service-row-actions .row-btn {
