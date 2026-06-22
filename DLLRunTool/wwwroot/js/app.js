@@ -16,7 +16,6 @@
     logFilterServiceId: "",
     logHistory: [],
     consoleSearch: "",
-    stackPresets: [],
     appVersion: "",
     updateInfo: null,
     lastBackupPreview: null,
@@ -40,7 +39,6 @@
     secretScanBanner: $("secretScanBanner"),
     secretScanBannerText: $("secretScanBannerText"),
     btnDismissSecretScan: $("btnDismissSecretScan"),
-    stackPresetBar: $("stackPresetBar"),
     btnOpenWorkspace: $("btnOpenWorkspace"),
     workspacePathList: $("workspacePathList"),
     workspacePathsFile: $("workspacePathsFile"),
@@ -133,6 +131,7 @@
   function healthLedClass(svc) {
     if (svc.isStarting && !svc.isRunning) return "starting";
     if (!svc.isRunning) return "";
+    if (svc.isExe) return "running";
     const h = (svc.healthStatus || "").toLowerCase();
     if (h === "healthy") return "running healthy";
     if (h === "unhealthy") return "running unhealthy";
@@ -149,28 +148,6 @@
     if (localStorage.getItem("mcp-secret-banner-dismissed") === "1") return;
     els.secretScanBannerText.textContent = t("secret.banner", { count: findings.length });
     els.secretScanBanner.classList.remove("hidden");
-  }
-
-  function renderStackPresets() {
-    if (!els.stackPresetBar) return;
-    const presets = state.stackPresets || [];
-    if (!presets.length) {
-      els.stackPresetBar.innerHTML = "";
-      return;
-    }
-    els.stackPresetBar.innerHTML = presets.map((p) => `
-      <span class="stack-preset-group">
-        <span class="stack-preset-label">${escapeHtml(p.name)}</span>
-        <button type="button" class="btn ghost small stack-btn" data-preset-run="${escapeAttr(p.id)}">${escapeHtml(t("stack.run"))}</button>
-        <button type="button" class="btn ghost small stack-btn" data-preset-stop="${escapeAttr(p.id)}">${escapeHtml(t("stack.stop"))}</button>
-      </span>
-    `).join("");
-    els.stackPresetBar.querySelectorAll("[data-preset-run]").forEach((btn) => {
-      btn.onclick = () => Bridge.send("runStackPreset", { presetId: btn.dataset.presetRun, platformId: state.platformId });
-    });
-    els.stackPresetBar.querySelectorAll("[data-preset-stop]").forEach((btn) => {
-      btn.onclick = () => Bridge.send("stopStackPreset", { presetId: btn.dataset.presetStop, platformId: state.platformId });
-    });
   }
 
   function showAppDialog({ title, message, buttons }) {
@@ -397,7 +374,7 @@
         <span class="status-led ${healthLedClass(svc)}"></span>
         <div class="service-row-info">
           <div class="service-row-name">${escapeHtml(displayName)}</div>
-          <div class="service-row-sub">${escapeHtml(svc.name)}${svc.url ? " · " + escapeHtml(svc.url) : ""}${svc.isStarting ? " · " + escapeHtml(t("dashboard.starting")) : ""}${svc.healthStatus && svc.isRunning ? " · " + escapeHtml(t("health." + svc.healthStatus, svc.healthStatus)) : ""}</div>
+          <div class="service-row-sub">${escapeHtml(svc.name)}${svc.url ? " · " + escapeHtml(svc.url) : ""}${svc.isStarting ? " · " + escapeHtml(t("dashboard.starting")) : ""}${!svc.isExe && svc.healthStatus && svc.isRunning ? " · " + escapeHtml(t("health." + svc.healthStatus, svc.healthStatus)) : ""}</div>
           ${svc.notes ? `<div class="service-row-note" title="${escapeAttr(svc.notes)}">${escapeHtml(svc.notes)}</div>` : ""}
           <div class="build-progress hidden" data-build-progress="${escapeAttr(svc.id)}">
             <div class="build-progress-track">
@@ -407,36 +384,36 @@
           </div>
         </div>
         <div class="service-row-actions">
-          ${renderBuildButton(svc)}
-          ${renderRunStopButton(svc)}
-          <button class="row-btn secondary${isServiceBusy(svc) ? " is-busy" : ""}" data-action="restart" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.restart"))}"${isServiceBusy(svc) ? " disabled" : ""}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            ${escapeHtml(t("btn.restart"))}
-          </button>
-          <button class="row-btn secondary" data-action="logs" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("log.viewService"))}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-            ${escapeHtml(t("btn.log"))}
-          </button>
-          <button class="row-btn icon-only" data-action="openProject" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.openProject"))}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-          </button>
-          <button class="row-btn icon-only" data-action="openCmd" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.openCmd"))}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-          </button>
-          <button class="row-btn icon-only lock-btn${svc.isLocked ? " locked" : ""}" data-action="lock" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(svc.isLocked ? t("lock.locked") : t("lock.unlocked"))}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              ${svc.isLocked
-                ? `<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>`
-                : `<path d="M7 11V7a5 5 0 0 1 9.9-1"/><rect x="5" y="11" width="14" height="10" rx="2"/>`}
-            </svg>
-          </button>
-          ${svc.isExe
-            ? `<span class="row-btn row-btn-spacer icon-only" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-              </span>`
-            : `<button class="row-btn icon-only" data-action="settings" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.settings"))}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-              </button>`}
+          <div class="service-row-actions-main">
+            ${renderBuildButton(svc)}
+            ${renderRunStopButton(svc)}
+            <button class="row-btn secondary icon-only${isServiceBusy(svc) ? " is-busy" : ""}" data-action="restart" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.restart"))}"${isServiceBusy(svc) ? " disabled" : ""}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
+          </div>
+          <div class="service-row-actions-tools">
+            <button class="row-btn icon-only" data-action="logs" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("log.viewService"))}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+            </button>
+            <button class="row-btn icon-only" data-action="openProject" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.openProject"))}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </button>
+            <button class="row-btn icon-only" data-action="openCmd" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.openCmd"))}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            </button>
+            <button class="row-btn icon-only lock-btn${svc.isLocked ? " locked" : ""}" data-action="lock" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(svc.isLocked ? t("lock.locked") : t("lock.unlocked"))}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                ${svc.isLocked
+                  ? `<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>`
+                  : `<path d="M7 11V7a5 5 0 0 1 9.9-1"/><rect x="5" y="11" width="14" height="10" rx="2"/>`}
+              </svg>
+            </button>
+            ${svc.isExe
+              ? ""
+              : `<button class="row-btn icon-only" data-action="settings" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.settings"))}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                </button>`}
+          </div>
         </div>
       `;
       els.dashboardList.appendChild(row);
@@ -458,23 +435,23 @@
       const sub = row.querySelector(".service-row-sub");
       if (sub) {
         const base = `${svc.name}${svc.url ? " · " + svc.url : ""}`;
-        const health = svc.healthStatus && svc.isRunning ? ` · ${t("health." + svc.healthStatus, svc.healthStatus)}` : "";
+        const health = !svc.isExe && svc.healthStatus && svc.isRunning ? ` · ${t("health." + svc.healthStatus, svc.healthStatus)}` : "";
         sub.textContent = svc.isStarting ? `${base} · ${t("dashboard.starting")}` : base + health;
       }
 
-      const actions = row.querySelector(".service-row-actions");
-      if (actions && actions.children.length >= 2) {
-        actions.children[0].outerHTML = renderBuildButton(svc);
-        actions.children[1].outerHTML = renderRunStopButton(svc);
-        const restart = actions.querySelector('[data-action="restart"]');
+      const main = row.querySelector(".service-row-actions-main");
+      if (main && main.children.length >= 2) {
+        main.children[0].outerHTML = renderBuildButton(svc);
+        main.children[1].outerHTML = renderRunStopButton(svc);
+        const restart = main.querySelector('[data-action="restart"]');
         if (restart) {
           restart.disabled = isServiceBusy(svc);
           restart.classList.toggle("is-busy", isServiceBusy(svc));
         }
-        actions.querySelectorAll("[data-action]").forEach(wireRowButton);
+        row.querySelectorAll("[data-action]").forEach(wireRowButton);
       }
 
-      const lockBtn = actions?.querySelector('[data-action="lock"]');
+      const lockBtn = row.querySelector('[data-action="lock"]');
       if (lockBtn) {
         lockBtn.classList.toggle("locked", !!svc.isLocked);
         lockBtn.title = svc.isLocked ? t("lock.locked") : t("lock.unlocked");
@@ -1481,8 +1458,6 @@
     }
     if (payload.runSettings) applyRunSettings(payload.runSettings);
     if (payload.uiState) restoreUiState(payload.uiState);
-    state.stackPresets = payload.stackPresets || [];
-    renderStackPresets();
     showSecretBanner(payload.configSecretFindings);
     renderPlatforms();
     applyTheme();

@@ -1,6 +1,6 @@
 ﻿{
     "version":  "1.2.0",
     "releasedAt":  "2026-06-22",
-    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.0/Win_Trung-MicroservicesControlPanel.zip",
-    "releaseNotes":  "Health check; dev stack preset; UI state; open folder/CMD; dry-run backup; secret banner; graceful stop; log rotation; export sanitize; notes; console search/copy; update bullets"
+    "downloadUrl":  "",
+    "releaseNotes":  "Health check (HTTP services only); UI row actions; open folder/CMD; dry-run backup; secret banner; graceful stop; log rotation; export sanitize; notes; console search/copy"
 }

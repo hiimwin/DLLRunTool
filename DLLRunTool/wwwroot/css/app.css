@@ -623,7 +623,8 @@ body {
 }
 
 .service-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
   padding: 14px 18px;
@@ -691,30 +692,7 @@ body {
   text-overflow: ellipsis;
 }
 
-.stack-preset-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 0 0 12px;
-  align-items: center;
-}
-
-.stack-preset-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-elevated);
-}
-
-.stack-preset-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
+.service-row-info { min-width: 0; }
 .secret-banner {
   border-color: var(--warning);
   background: rgba(249, 171, 0, 0.12);
@@ -769,8 +747,6 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.75; }
 }
-
-.service-row-info { flex: 1; min-width: 0; }
 
 .service-row-name {
   font-size: 15px;
@@ -832,18 +808,30 @@ body {
 }
 
 .service-row-actions {
-  display: grid;
-  grid-template-columns: 78px 90px 92px 60px 38px 38px;
-  gap: 8px;
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
+  gap: 8px;
   flex-shrink: 0;
 }
 
-.service-row-actions .row-btn,
-.service-row-actions .row-btn-spacer {
-  width: 100%;
-  box-sizing: border-box;
-  justify-content: center;
+.service-row-actions-main,
+.service-row-actions-tools {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.service-row-actions-tools {
+  gap: 4px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+}
+
+.service-row-actions .row-btn {
+  flex-shrink: 0;
 }
 
 .service-row-actions .row-btn.success,
@@ -1533,8 +1521,15 @@ textarea {
 
 @media (max-width: 900px) {
   .backup-summary { grid-template-columns: repeat(2, 1fr); }
-  .service-row { flex-wrap: wrap; }
-  .service-row-actions { width: 100%; flex-wrap: wrap; }
+  .service-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .service-row-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    max-width: 100%;
+    overflow-x: auto;
+  }
   .form-grid,
   .form-grid-2,
   .form-grid-3 { grid-template-columns: 1fr; }

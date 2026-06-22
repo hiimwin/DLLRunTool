@@ -723,8 +723,15 @@ public sealed class ServiceOrchestrator
                 Level = "success",
                 Message = $"{service.Name} đang chạy ({mode})..."
             });
-            _healthStatus[service.Id] = "starting";
-            _ = PollHealthAsync(service);
+            if (ServiceHealthChecker.CanCheck(service))
+            {
+                _healthStatus[service.Id] = "starting";
+                _ = PollHealthAsync(service);
+            }
+            else
+            {
+                _healthStatus.Remove(service.Id);
+            }
         }
         catch (Exception ex)
         {
@@ -1314,7 +1321,9 @@ public sealed class ServiceOrchestrator
             IsRunBlocked = IsRunBlocked(s),
             IsStarting = op == "run",
             IsBuilding = op == "build",
-            HealthStatus = _healthStatus.GetValueOrDefault(s.Id, s.IsRunning ? "starting" : "unknown"),
+            HealthStatus = ServiceHealthChecker.CanCheck(s)
+                ? _healthStatus.GetValueOrDefault(s.Id, s.IsRunning ? "starting" : "unknown")
+                : "",
             Notes = s.Notes ?? ""
         };
     }
