@@ -4,12 +4,12 @@ using System.Text;
 namespace DLLRunTool.Services;
 
 /// <summary>
-/// Manifest URL nhÃƒÂºng trong exe (obfuscate) Ã¢â‚¬â€ khÃƒÂ´ng ship plain text trong zip.
+/// Manifest URL nhÃƒÆ’Ã‚Âºng trong exe (obfuscate) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â khÃƒÆ’Ã‚Â´ng ship plain text trong zip.
 /// Regenerate payload khi publish: scripts/embed-update-endpoint.ps1
 /// </summary>
 internal static class UpdateEndpointStore
 {
-    // Replaced by publish.ps1 Ã¢â‚¬â€ do not edit payload by hand.
+    // Replaced by publish.ps1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â do not edit payload by hand.
     private const string Payload = "Uxx0C/WgU5A0v8YNIQXv/U4KdQjj6B/QKKrUTTJC+PpWR2gS7/cL1ijx9W8KPu77bwdvF6n3HdYo8cRTIg3v8BYFYRXv/BnMMvDbUCkC";
 
     private static readonly byte[] Key = SHA256.HashData(Encoding.UTF8.GetBytes("AKC.Products.MCP.UpdateEndpoint.v1"))[..16];
@@ -32,7 +32,7 @@ internal static class UpdateEndpointStore
         }
     }
 
-    /// <summary>ChÃ¡Â»â€° dÃƒÂ¹ng khi chÃ¡ÂºÂ¡y tÃ¡Â»Â« source/debug Ã¢â‚¬â€ file khÃƒÂ´ng Ã„â€˜ÃƒÂ³ng gÃƒÂ³i trong zip release.</summary>
+    /// <summary>ChÃƒÂ¡Ã‚Â»Ã¢â‚¬Â° dÃƒÆ’Ã‚Â¹ng khi chÃƒÂ¡Ã‚ÂºÃ‚Â¡y tÃƒÂ¡Ã‚Â»Ã‚Â« source/debug ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â file khÃƒÆ’Ã‚Â´ng Ãƒâ€žÃ¢â‚¬ËœÃƒÆ’Ã‚Â³ng gÃƒÆ’Ã‚Â³i trong zip release.</summary>
     private static string? TryDevConfigOverride()
     {
         var path = Path.Combine(AppContext.BaseDirectory, "update-check.config.json");

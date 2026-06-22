@@ -128,16 +128,30 @@
     });
   }
 
+  function formatHealthLabel(svc) {
+    if (svc.isExe || svc.enableHealthCheck === false || !svc.healthStatus) return "";
+    const h = (svc.healthStatus || "").toLowerCase();
+    const attempt = svc.healthCheckAttempt;
+    const max = svc.healthCheckMaxAttempts;
+    if ((h === "checking" || h === "retrying") && attempt > 0 && max > 0) {
+      return t(`health.${h}`, { attempt, max });
+    }
+    const key = `health.${h}`;
+    return t(key, h);
+  }
+
   function healthLedClass(svc) {
     if (svc.isStarting && !svc.isRunning) return "starting";
     if (!svc.isRunning) return "";
-    if (svc.isExe) return "running";
+    if (svc.isExe || svc.enableHealthCheck === false) return "running";
     const h = (svc.healthStatus || "").toLowerCase();
     if (h === "healthy") return "running healthy";
     if (h === "unhealthy") return "running unhealthy";
     if (h === "crashed") return "crashed";
-    if (h === "starting") return "running starting-health";
-    return "running";
+    if (h === "no-health") return "running no-health";
+    if (h === "retrying") return "running retrying-health";
+    if (h === "checking" || h === "starting") return "running checking-health";
+    return "running checking-health";
   }
 
   function showSecretBanner(findings) {
@@ -345,7 +359,7 @@
   function renderDashboard() {
     const list = getActiveServices();
     const signature = list.map((s) => s.id).join(",");
-    const statusSig = list.map((s) => `${s.id}:${s.isRunning ? 1 : 0}:${s.isLocked ? 1 : 0}:${s.isRunProtected ? 1 : 0}:${s.isStarting ? 1 : 0}:${s.isBuilding ? 1 : 0}:${s.healthStatus || ""}`).join(",");
+    const statusSig = list.map((s) => `${s.id}:${s.isRunning ? 1 : 0}:${s.isLocked ? 1 : 0}:${s.isRunProtected ? 1 : 0}:${s.isStarting ? 1 : 0}:${s.isBuilding ? 1 : 0}:${s.healthStatus || ""}:${s.healthCheckAttempt || 0}`).join(",");
     const hasRows = !!els.dashboardList.querySelector("[data-service-id]");
 
     if (signature === state.dashboardSig && hasRows) {
@@ -367,6 +381,7 @@
 
     list.forEach((svc) => {
       const displayName = svc.dllName || svc.name;
+      const healthLabel = formatHealthLabel(svc);
       const row = document.createElement("div");
       row.className = `service-row${isRunBlocked(svc) ? " service-row-protected" : ""}`;
       row.dataset.serviceId = svc.id;
@@ -374,7 +389,7 @@
         <span class="status-led ${healthLedClass(svc)}"></span>
         <div class="service-row-info">
           <div class="service-row-name">${escapeHtml(displayName)}</div>
-          <div class="service-row-sub">${escapeHtml(svc.name)}${svc.url ? " · " + escapeHtml(svc.url) : ""}${svc.isStarting ? " · " + escapeHtml(t("dashboard.starting")) : ""}${!svc.isExe && svc.healthStatus && svc.isRunning ? " · " + escapeHtml(t("health." + svc.healthStatus, svc.healthStatus)) : ""}</div>
+          <div class="service-row-sub">${escapeHtml(svc.name)}${svc.url ? " · " + escapeHtml(svc.url) : ""}${svc.isStarting ? " · " + escapeHtml(t("dashboard.starting")) : ""}${svc.isRunning && healthLabel ? " · " + escapeHtml(healthLabel) : ""}</div>
           ${svc.notes ? `<div class="service-row-note" title="${escapeAttr(svc.notes)}">${escapeHtml(svc.notes)}</div>` : ""}
           <div class="build-progress hidden" data-build-progress="${escapeAttr(svc.id)}">
             <div class="build-progress-track">
@@ -437,8 +452,9 @@
       const sub = row.querySelector(".service-row-sub");
       if (sub) {
         const base = `${svc.name}${svc.url ? " · " + svc.url : ""}`;
-        const health = !svc.isExe && svc.healthStatus && svc.isRunning ? ` · ${t("health." + svc.healthStatus, svc.healthStatus)}` : "";
-        sub.textContent = svc.isStarting ? `${base} · ${t("dashboard.starting")}` : base + health;
+        const health = svc.isRunning ? formatHealthLabel(svc) : "";
+        const healthSuffix = health ? ` · ${health}` : "";
+        sub.textContent = svc.isStarting ? `${base} · ${t("dashboard.starting")}` : base + healthSuffix;
       }
 
       const main = row.querySelector(".service-row-actions-main");

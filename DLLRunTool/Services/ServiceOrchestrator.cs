@@ -25,6 +25,7 @@ public sealed class ServiceOrchestrator
     private readonly object _serviceOpsGate = new();
     private readonly Dictionary<string, string> _serviceOps = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _healthStatus = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, (int Attempt, int Max)> _healthPollProgress = new(StringComparer.OrdinalIgnoreCase);
 
     public const string AppAuthor = "Win_Trung";
     public const string AppTitle = "Win_Trung - Microservices Control Panel";
@@ -726,11 +727,13 @@ public sealed class ServiceOrchestrator
             if (ServiceHealthChecker.CanCheck(service))
             {
                 _healthStatus[service.Id] = "starting";
+                _healthPollProgress[service.Id] = (0, ServiceHealthChecker.MaxPollAttempts);
                 _ = PollHealthAsync(service);
             }
             else
             {
                 _healthStatus.Remove(service.Id);
+                _healthPollProgress.Remove(service.Id);
             }
         }
         catch (Exception ex)
@@ -747,6 +750,7 @@ public sealed class ServiceOrchestrator
 
         ProcessTreeKiller.KillByService(service, RunSettingsStore.StopGracefulTimeoutMs);
         _healthStatus[service.Id] = "unknown";
+        _healthPollProgress.Remove(service.Id);
         PushLog(new LogPayload { ServiceId = service.Id, Level = "warning", Message = $"Service {service.Name} đã dừng." });
         RefreshAllStatuses();
     }
@@ -1304,6 +1308,7 @@ public sealed class ServiceOrchestrator
     {
         var op = GetServiceOperation(s.Id);
         var locked = ServiceLocksStore.IsLocked(s.Id);
+        _healthPollProgress.TryGetValue(s.Id, out var hp);
         return new ServiceStateDto
         {
             Id = s.Id,
@@ -1324,6 +1329,9 @@ public sealed class ServiceOrchestrator
             HealthStatus = ServiceHealthChecker.CanCheck(s)
                 ? _healthStatus.GetValueOrDefault(s.Id, s.IsRunning ? "starting" : "unknown")
                 : "",
+            HealthCheckAttempt = hp.Attempt,
+            HealthCheckMaxAttempts = hp.Max > 0 ? hp.Max : ServiceHealthChecker.MaxPollAttempts,
+            EnableHealthCheck = s.EnableHealthCheck && !s.IsExe && !string.IsNullOrWhiteSpace(s.Url),
             Notes = s.Notes ?? ""
         };
     }
@@ -1454,34 +1462,81 @@ public sealed class ServiceOrchestrator
         if (!ServiceHealthChecker.CanCheck(service))
             return;
 
-        foreach (var delayMs in ServiceHealthChecker.PollDelaysBeforeCheckMs)
+        var delays = ServiceHealthChecker.PollDelaysBeforeCheckMs;
+        var max = delays.Length;
+
+        for (var i = 0; i < max; i++)
         {
-            await Task.Delay(delayMs).ConfigureAwait(false);
+            await Task.Delay(delays[i]).ConfigureAwait(false);
 
             if (!service.IsRunning)
             {
                 _healthStatus[service.Id] = "crashed";
+                _healthPollProgress.Remove(service.Id);
                 PushServicesList();
                 return;
             }
 
-            var status = await ServiceHealthChecker.CheckAsync(service).ConfigureAwait(false);
-            _healthStatus[service.Id] = status;
+            var attempt = i + 1;
+            _healthStatus[service.Id] = "checking";
+            _healthPollProgress[service.Id] = (attempt, max);
             PushServicesList();
 
-            if (status is "healthy" or "unhealthy")
+            var status = await ServiceHealthChecker.CheckAsync(service).ConfigureAwait(false);
+
+            if (status == "healthy")
             {
-                if (status == "unhealthy")
-                {
-                    PushLog(new LogPayload
-                    {
-                        ServiceId = service.Id,
-                        ServiceName = service.Name,
-                        Level = "warning",
-                        Message = $"{service.Name}: process chạy nhưng health check chưa OK ({service.Url})."
-                    });
-                }
+                _healthStatus[service.Id] = "healthy";
+                _healthPollProgress.Remove(service.Id);
+                PushServicesList();
                 return;
+            }
+
+            if (status == "no-health")
+            {
+                _healthStatus[service.Id] = "no-health";
+                _healthPollProgress.Remove(service.Id);
+                PushLog(new LogPayload
+                {
+                    ServiceId = service.Id,
+                    ServiceName = service.Name,
+                    Level = "info",
+                    Message = $"{service.Name}: không có endpoint health — chỉ theo process đang chạy."
+                });
+                PushServicesList();
+                return;
+            }
+
+            var isLast = i == max - 1;
+            if (!isLast)
+            {
+                _healthStatus[service.Id] = "retrying";
+                _healthPollProgress[service.Id] = (attempt, max);
+                var waitSec = delays[i + 1] / 1000;
+                PushLog(new LogPayload
+                {
+                    ServiceId = service.Id,
+                    ServiceName = service.Name,
+                    Level = "warning",
+                    Message = $"{service.Name}: health chưa OK — thử lại sau ~{waitSec}s ({attempt}/{max})."
+                });
+                PushServicesList();
+                continue;
+            }
+
+            _healthStatus[service.Id] = status == "pending" ? "unhealthy" : status;
+            _healthPollProgress.Remove(service.Id);
+            PushServicesList();
+
+            if (_healthStatus[service.Id] == "unhealthy")
+            {
+                PushLog(new LogPayload
+                {
+                    ServiceId = service.Id,
+                    ServiceName = service.Name,
+                    Level = "warning",
+                    Message = $"{service.Name}: health lỗi sau {max} lần thử ({service.Url})."
+                });
             }
         }
     }

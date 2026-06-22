@@ -1,6 +1,6 @@
 ﻿{
-    "version":  "1.2.3",
+    "version":  "1.2.4",
     "releasedAt":  "2026-06-22",
-    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.3/Win_Trung-MicroservicesControlPanel.zip",
-    "releaseNotes":  "Health check: doi 30s/60s/120s truoc moi lan thu (~30s, ~90s, ~210s); khong bao unhealthy khi timeout luc dang khoi dong"
+    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.4/Win_Trung-MicroservicesControlPanel.zip",
+    "releaseNotes":  "Health UI retry/no-endpoint; EnableHealthCheck; README cap nhat"
 }

@@ -133,6 +133,15 @@ public class ServiceStateDto
     [JsonPropertyName("healthStatus")]
     public string HealthStatus { get; set; } = "unknown";
 
+    [JsonPropertyName("healthCheckAttempt")]
+    public int HealthCheckAttempt { get; set; }
+
+    [JsonPropertyName("healthCheckMaxAttempts")]
+    public int HealthCheckMaxAttempts { get; set; }
+
+    [JsonPropertyName("enableHealthCheck")]
+    public bool EnableHealthCheck { get; set; } = true;
+
     [JsonPropertyName("notes")]
     public string Notes { get; set; } = "";
 }

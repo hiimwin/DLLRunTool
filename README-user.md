@@ -6,23 +6,36 @@ Tool chạy / dừng / build microservices local (Back-End + Front-End).
 
 1. Giải nén zip vào thư mục cố định (ví dụ `C:\Tools\MCP`).
 2. Mở **DLLRunTool.exe**.
-3. Tab **Workspace** → cấu hình thư mục gốc (`loyaltyRoot`, `redisPath`, …) → **Lưu**.
-4. Tab **Dịch vụ** → Run từng service theo thứ tự gợi ý.
+3. Tab **Workspace** → cấu hình `loyaltyRoot`, `redisPath`, … → **Lưu**.
+4. Tab **Dịch vụ** → Run theo thứ tự: Redis → AuthServer → các BE → Gateway → FE.
+
+## Console log
+
+- Log hiển thị dưới cùng mọi tab; lọc theo service, tìm/copy log.
+- **CMD tất cả** / **CMD đang chọn**: mở cửa sổ mirror log (tùy chọn).
+- Redis: log nằm trong tool, không mở CMD riêng.
+
+## Health check
+
+- Service có URL: sau ~30s tool tự thử `/health` (tối đa 3 lần: ~30s, ~90s, ~210s).
+- Đang chờ / thử lại: LED vàng hoặc tím + dòng trạng thái (vd. *Health chưa OK — thử lại 1/3*).
+- Redis và exe: không check health.
+- Service không có endpoint health: hiện *Không có endpoint health* — process vẫn chạy bình thường.
 
 ## Auto-update
 
-Tool tự kiểm tra bản mới khi mở. Nhấn **Cập nhật ngay** để tải và áp dụng — giữ nguyên cấu hình local (`paths.local.json`, backup, global config).
+Tool tự kiểm tra bản mới khi mở. **Cập nhật ngay** → tải và áp dụng, giữ cấu hình local.
 
 ## File local (không xóa khi update)
 
 | File | Mục đích |
 |------|----------|
-| `paths.local.json` | Đường dẫn workspace trên máy bạn |
-| `global.*.json` | Cấu hình chung đã lưu trong tool |
-| `global.*.secrets.json` | DB password (không commit) |
+| `paths.local.json` | Đường dẫn workspace |
+| `global.*.json` | Cấu hình chung |
+| `global.*.secrets.json` | DB password |
 | `backups/` | Export config |
 
 ## Ghi chú
 
-- `services.loyalty.json` chỉ mô tả **cấu trúc thư mục** dự án — mỗi máy trỏ tới repo của chính bạn qua Workspace Paths.
-- Không commit / chia sẻ file chứa password.
+- `services.loyalty.json` mô tả cấu trúc service — mỗi máy trỏ repo qua Workspace Paths.
+- Không chia sẻ file có password.

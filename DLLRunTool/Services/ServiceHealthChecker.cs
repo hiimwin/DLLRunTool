@@ -8,6 +8,8 @@ public static class ServiceHealthChecker
     /// <summary>Đợi trước mỗi lần GET health: 30s → 60s → 120s (check lúc ~30s, ~90s, ~210s).</summary>
     public static readonly int[] PollDelaysBeforeCheckMs = [30_000, 60_000, 120_000];
 
+    public static int MaxPollAttempts => PollDelaysBeforeCheckMs.Length;
+
     private static readonly HttpClient Http = new()
     {
         Timeout = TimeSpan.FromSeconds(5)
@@ -19,9 +21,13 @@ public static class ServiceHealthChecker
     }
 
     public static bool CanCheck(ServiceConfig service) =>
+        service.EnableHealthCheck &&
         !service.IsExe &&
         !string.IsNullOrWhiteSpace(service.Url);
 
+    /// <summary>
+    /// healthy | unhealthy | no-health (không có endpoint) | pending (chưa kết nối được / 5xx — thử lại).
+    /// </summary>
     public static async Task<string> CheckAsync(ServiceConfig service, CancellationToken ct = default)
     {
         if (!CanCheck(service))
@@ -38,25 +44,48 @@ public static class ServiceHealthChecker
         paths.Add("health-status");
         paths.Add("");
 
+        var sawResponse = false;
+        var saw404Only = true;
+        var sawUnhealthy = false;
+
         foreach (var path in paths.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var url = string.IsNullOrEmpty(path) ? baseUrl : $"{baseUrl}/{path}";
             try
             {
                 using var response = await Http.GetAsync(url, ct).ConfigureAwait(false);
-                if ((int)response.StatusCode < 500)
-                    return response.IsSuccessStatusCode ? "healthy" : "unhealthy";
+                sawResponse = true;
+                var code = (int)response.StatusCode;
+
+                if (code is >= 200 and < 300)
+                    return "healthy";
+
+                if (code == 404)
+                    continue;
+
+                saw404Only = false;
+
+                if (code is >= 500)
+                    continue;
+
+                sawUnhealthy = true;
             }
             catch (HttpRequestException)
             {
-                // try next path
+                saw404Only = false;
             }
             catch (TaskCanceledException) when (!ct.IsCancellationRequested)
             {
-                // Timeout — service có thể vẫn đang khởi động, thử path khác hoặc đợi vòng sau.
+                saw404Only = false;
             }
         }
 
-        return service.IsRunning ? "starting" : "crashed";
+        if (sawUnhealthy)
+            return "unhealthy";
+
+        if (sawResponse && saw404Only)
+            return "no-health";
+
+        return "pending";
     }
 }

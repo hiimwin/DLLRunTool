@@ -667,8 +667,26 @@ body {
 }
 
 .status-led.unhealthy {
-  background: var(--warning);
-  box-shadow: 0 0 10px var(--warning);
+  background: var(--danger);
+  box-shadow: 0 0 10px var(--danger);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.status-led.checking-health {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.status-led.retrying-health {
+  background: #f59e0b;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.65), 0 0 0 3px rgba(245, 158, 11, 0.2);
+  animation: pulse 0.9s ease-in-out infinite;
+}
+
+.status-led.no-health {
+  background: var(--text-muted);
+  box-shadow: none;
 }
 
 .status-led.crashed {

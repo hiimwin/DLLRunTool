@@ -23,8 +23,11 @@ public class ServiceConfig
     /// <summary>Ghi chú hiển thị trên dashboard (VPN, port, cảnh báo...).</summary>
     public string Notes { get; set; } = "";
 
-    /// <summary>Đường health tùy chọn (mặc định thử /health).</summary>
+    /// <summary>Đường health tùy chọn (mặc định thử /health). Để trống = thử /health, /health-status, URL gốc.</summary>
     public string HealthPath { get; set; } = "";
+
+    /// <summary>false = không poll HTTP health (chỉ cần process chạy).</summary>
+    public bool EnableHealthCheck { get; set; } = true;
 
     [JsonIgnore]
     public Process? ManagedProcess { get; set; }

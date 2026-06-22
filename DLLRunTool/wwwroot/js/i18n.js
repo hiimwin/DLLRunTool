@@ -105,6 +105,9 @@
         unhealthy: "Health lỗi",
         crashed: "Đã crash",
         starting: "Đang khởi động (chưa check health)",
+        checking: "Đang kiểm tra health ({attempt}/{max})",
+        retrying: "Health chưa OK — thử lại ({attempt}/{max})",
+        "no-health": "Không có endpoint health",
         unknown: ""
       },
       secret: {
@@ -263,6 +266,9 @@
         unhealthy: "Health failed",
         crashed: "Crashed",
         starting: "Starting (health check pending)",
+        checking: "Checking health ({attempt}/{max})",
+        retrying: "Health not OK — retrying ({attempt}/{max})",
+        "no-health": "No health endpoint",
         unknown: ""
       },
       secret: {
