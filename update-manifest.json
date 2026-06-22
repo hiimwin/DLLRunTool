@@ -1,6 +1,6 @@
 ﻿{
-    "version":  "1.2.0",
+    "version":  "1.2.1",
     "releasedAt":  "2026-06-22",
-    "downloadUrl":  "",
-    "releaseNotes":  "Health check (HTTP services only); UI row actions; open folder/CMD; dry-run backup; secret banner; graceful stop; log rotation; export sanitize; notes; console search/copy"
+    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.1/Win_Trung-MicroservicesControlPanel.zip",
+    "releaseNotes":  "Redis log trong console tool (khong mo CMD rieng); health check chi cho HTTP services; sua layout nut service"
 }

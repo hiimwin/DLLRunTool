@@ -79,23 +79,35 @@ public sealed class AsyncCommandRunner
         }, ct);
     }
 
-    private Process? StartExeService(ServiceConfig service, string fileName, string arguments, string workingDir)
+    private Process? StartExeService(ServiceConfig service, string fileName, string arguments, string workingDir) =>
+        StartRedirectedService(service, fileName, arguments, workingDir);
+
+    private Process? StartConsoleService(ServiceConfig service, ResolvedRunCommand cmd) =>
+        StartRedirectedService(service, cmd.FileName, cmd.Arguments, cmd.WorkingDirectory);
+
+    private Process StartRedirectedService(ServiceConfig service, string fileName, string arguments, string workingDir)
     {
         EnsureWorkingDirectory(workingDir, service.Name);
+
+        var logPath = ServiceLogMirror.EnsureLogFile(service.Id, service.Name);
+        ServiceLogMirror.Register(service.Id, logPath);
 
         var psi = new ProcessStartInfo
         {
             FileName = fileName,
             Arguments = arguments,
             WorkingDirectory = workingDir,
-            UseShellExecute = true,
-            WindowStyle = ProcessWindowStyle.Minimized
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
         };
 
-        Process? started = null;
+        Process process;
         try
         {
-            started = Process.Start(psi);
+            process = Process.Start(psi)
+                      ?? throw new InvalidOperationException("Process.Start trả về null.");
         }
         catch (Exception ex)
         {
@@ -103,115 +115,6 @@ public sealed class AsyncCommandRunner
         }
 
         ProcessStatusCache.Invalidate();
-        var startedPid = started?.Id;
-
-        for (var i = 0; i < 40; i++)
-        {
-            Thread.Sleep(250);
-
-            if (startedPid is > 0)
-            {
-                var direct = TryGetLiveProcess(startedPid.Value);
-                if (direct != null)
-                    return AttachExeProcess(service, direct);
-            }
-
-            ProcessStatusCache.RefreshIfStale(force: true);
-            var found = ProcessTreeKiller.FindRunningProcess(service, forceRefresh: true)
-                        ?? ProcessStatusCache.FindExeProcess(service.DllName, useCache: false);
-            if (found != null && !found.HasExited)
-                return AttachExeProcess(service, found);
-        }
-
-        var fallback = ProcessStatusCache.FindExeProcess(service.DllName, useCache: false);
-        if (fallback != null && !fallback.HasExited)
-            return AttachExeProcess(service, fallback);
-
-        if (startedPid is > 0 && IsProcessNameRunning(service.DllName))
-        {
-            var late = ProcessStatusCache.FindExeProcess(service.DllName, useCache: false);
-            if (late != null && !late.HasExited)
-                return AttachExeProcess(service, late);
-
-            _emitLog(new LogPayload
-            {
-                ServiceId = service.Id,
-                Level = "success",
-                Message = $"{service.Name} đã khởi động (PID {startedPid}) — process đang chạy."
-            });
-            return started;
-        }
-
-        throw new InvalidOperationException(
-            $"{service.Name} không phát hiện được sau khi start. Thử chạy thủ công: {fileName}");
-    }
-
-    private Process AttachExeProcess(ServiceConfig service, Process found)
-    {
-        service.ManagedProcess = found;
-        found.EnableRaisingEvents = true;
-        found.Exited += (_, _) =>
-        {
-            if (service.ManagedProcess?.Id == found.Id)
-                service.ManagedProcess = null;
-        };
-        _emitLog(new LogPayload
-        {
-            ServiceId = service.Id,
-            Level = "success",
-            Message = $"{service.Name} đã khởi động (PID {found.Id})."
-        });
-        return found;
-    }
-
-    private static Process? TryGetLiveProcess(int pid)
-    {
-        try
-        {
-            var p = Process.GetProcessById(pid);
-            return p.HasExited ? null : p;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static bool IsProcessNameRunning(string dllOrExeName)
-    {
-        var name = Path.GetFileNameWithoutExtension(dllOrExeName);
-        if (string.IsNullOrWhiteSpace(name))
-            return false;
-
-        return Process.GetProcessesByName(name).Any(p =>
-        {
-            try { return !p.HasExited; }
-            catch { return false; }
-        });
-    }
-
-    private Process? StartConsoleService(ServiceConfig service, ResolvedRunCommand cmd)
-    {
-        EnsureWorkingDirectory(cmd.WorkingDirectory, service.Name);
-
-        var logPath = ServiceLogMirror.EnsureLogFile(service.Id, service.Name);
-        ServiceLogMirror.Register(service.Id, logPath);
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = cmd.FileName,
-            Arguments = cmd.Arguments,
-            WorkingDirectory = cmd.WorkingDirectory,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-
-        var process = Process.Start(psi);
-        if (process == null)
-            throw new InvalidOperationException("Process.Start trả về null.");
-
         service.ManagedProcess = process;
         process.EnableRaisingEvents = true;
         AttachLogStreaming(service, process, "run");
@@ -229,6 +132,14 @@ public sealed class AsyncCommandRunner
                 Message = $"{service.Name}: log trong tool + {modeLabel} (Alt+Tab)."
             });
         }
+
+        _emitLog(new LogPayload
+        {
+            ServiceId = service.Id,
+            ServiceName = service.Name,
+            Level = "success",
+            Message = $"{service.Name} đã khởi động (PID {process.Id})."
+        });
 
         return process;
     }
