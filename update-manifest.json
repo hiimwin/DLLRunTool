@@ -1,6 +1,6 @@
-﻿{
-    "version":  "1.2.5",
-    "releasedAt":  "2026-06-22",
-    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.5/Win_Trung-MicroservicesControlPanel.zip",
-    "releaseNotes":  "Health localhost HTTPS self-signed; FE chi check URL goc; huong dan SmartScreen; script ky so tuy chon"
+{
+  "version": "1.2.6",
+  "releasedAt": "2026-06-22",
+  "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.6/Win_Trung-MicroservicesControlPanel.zip",
+  "releaseNotes": "Handbook tab tren icon rail; tai lieu kien truc LoyaltyPlatform (MasterData, luong request, thu tu chay local)"
 }
