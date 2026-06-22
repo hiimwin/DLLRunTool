@@ -48,6 +48,25 @@ Sau `publish.ps1`: commit + push `update-manifest.json` lên nhánh phát hành;
 
 Zip release **không** chứa `paths.local.json`, `global.*.secrets.json`, `backup-*.json` (đã scrub trong `publish.ps1`).
 
+### Code signing (SmartScreen)
+
+Windows có thể hiện *Windows protected your PC* với exe **chưa ký**. Cách xử lý:
+
+| Cách | Hiệu quả |
+|------|----------|
+| Chứng chỉ **Code Signing** (OV/EV) + `signtool` | **Tốt nhất** — giảm hoặc hết SmartScreen |
+| Cùng bản đã ký, phát hành lâu dài | Tích lũy reputation (OV) |
+| User bấm *More info* → *Run anyway* | Tạm thời, mỗi máy / mỗi bản mới |
+| IT whitelist nội bộ | Phù hợp team |
+
+```powershell
+$env:MCCP_SIGN_PFX = "C:\certs\codesign.pfx"
+$env:MCCP_SIGN_PASSWORD = "..."
+.\publish.ps1 -Version "1.2.5"
+```
+
+Script `scripts\sign-publish.ps1` tự gọi sau `dotnet publish` nếu có `MCCP_SIGN_PFX`.
+
 ## Tự động cập nhật
 
 Tool so sánh version local với `update-manifest.json` trên server cập nhật khi mở app.

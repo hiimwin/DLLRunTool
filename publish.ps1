@@ -4,7 +4,9 @@
 param(
     [string]$Version = "",
     [string]$DownloadUrl = "",
-    [string]$ReleaseNotes = ""
+    [string]$ReleaseNotes = "",
+    [string]$SignPfx = "",
+    [string]$SignPassword = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -117,6 +119,11 @@ foreach ($pat in $secretPatterns) {
 $webviewProfile = Join-Path $outDir "DLLRunTool.exe.WebView2"
 if (Test-Path $webviewProfile) {
     Remove-Item $webviewProfile -Recurse -Force
+}
+
+$signScript = Join-Path $root "scripts\sign-publish.ps1"
+if (Test-Path $signScript) {
+    & $signScript -PublishDir $outDir -PfxPath $SignPfx -Password $SignPassword
 }
 
 Write-Host "==> Create zip..." -ForegroundColor Cyan
