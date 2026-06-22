@@ -104,7 +104,7 @@
         healthy: "Health OK",
         unhealthy: "Health lỗi",
         crashed: "Đã crash",
-        starting: "Đang kiểm tra health",
+        starting: "Đang khởi động (chưa check health)",
         unknown: ""
       },
       secret: {
@@ -262,7 +262,7 @@
         healthy: "Health OK",
         unhealthy: "Health failed",
         crashed: "Crashed",
-        starting: "Checking health",
+        starting: "Starting (health check pending)",
         unknown: ""
       },
       secret: {

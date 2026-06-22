@@ -1,6 +1,6 @@
 ﻿{
-    "version":  "1.2.2",
+    "version":  "1.2.3",
     "releasedAt":  "2026-06-22",
-    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.2/Win_Trung-MicroservicesControlPanel.zip",
-    "releaseNotes":  "Bo note AuthServer; can thang cot nut service (Redis khop DLL); grid co dinh Build/Run/icon"
+    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.3/Win_Trung-MicroservicesControlPanel.zip",
+    "releaseNotes":  "Health check: doi 30s/60s/120s truoc moi lan thu (~30s, ~90s, ~210s); khong bao unhealthy khi timeout luc dang khoi dong"
 }

@@ -5,9 +5,12 @@ namespace DLLRunTool.Services;
 
 public static class ServiceHealthChecker
 {
+    /// <summary>Đợi trước mỗi lần GET health: 30s → 60s → 120s (check lúc ~30s, ~90s, ~210s).</summary>
+    public static readonly int[] PollDelaysBeforeCheckMs = [30_000, 60_000, 120_000];
+
     private static readonly HttpClient Http = new()
     {
-        Timeout = TimeSpan.FromSeconds(4)
+        Timeout = TimeSpan.FromSeconds(5)
     };
 
     static ServiceHealthChecker()
@@ -50,7 +53,7 @@ public static class ServiceHealthChecker
             }
             catch (TaskCanceledException) when (!ct.IsCancellationRequested)
             {
-                return "unhealthy";
+                // Timeout — service có thể vẫn đang khởi động, thử path khác hoặc đợi vòng sau.
             }
         }
 

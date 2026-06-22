@@ -1454,9 +1454,10 @@ public sealed class ServiceOrchestrator
         if (!ServiceHealthChecker.CanCheck(service))
             return;
 
-        for (var i = 0; i < 15; i++)
+        foreach (var delayMs in ServiceHealthChecker.PollDelaysBeforeCheckMs)
         {
-            await Task.Delay(2000).ConfigureAwait(false);
+            await Task.Delay(delayMs).ConfigureAwait(false);
+
             if (!service.IsRunning)
             {
                 _healthStatus[service.Id] = "crashed";
