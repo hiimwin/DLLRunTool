@@ -64,7 +64,8 @@
     btnClearLog: $("btnClearLog"),
     btnStopAll: $("btnStopAll"),
     btnReloadServices: $("btnReloadServices"),
-    chkShowConsole: $("chkShowConsole"),
+    chkShowConsoleAll: $("chkShowConsoleAll"),
+    chkShowConsoleSelected: $("chkShowConsoleSelected"),
     logFilter: $("logFilter"),
     logFilterBtn: $("logFilterBtn"),
     logFilterLabel: $("logFilterLabel"),
@@ -163,7 +164,8 @@
     if (state.view === "global" && state.lastGlobalConfig) renderGlobalConfig(state.lastGlobalConfig);
     if (state.workspace) renderWorkspaceBanner(state.workspace);
     updateLogServiceFilter();
-    updateConsoleModeHint(!!(els.chkShowConsole && els.chkShowConsole.checked));
+    updateConsoleSelectedToggle();
+    updateConsoleModeHint();
     if (state.updateInfo?.isUpdateAvailable) showUpdateBanner(state.updateInfo);
     state.dashboardSig = "";
     renderDashboard();
@@ -485,7 +487,7 @@
     }
   }
 
-  function setLogFilterValue(serviceId, label) {
+  function setLogFilterValue(serviceId, label, silent = false) {
     state.logFilterServiceId = serviceId || "";
     if (els.logFilterLabel) {
       els.logFilterLabel.textContent = serviceId ? label : t("console.allServices");
@@ -496,6 +498,49 @@
       });
     }
     renderConsoleLogs();
+    updateConsoleSelectedToggle();
+    if (silent) return;
+    if (els.chkShowConsoleSelected?.checked && serviceId) {
+      sendRunSettingsPatch({
+        showConsoleSelected: true,
+        consoleSelectedServiceId: serviceId
+      });
+    } else if (!serviceId && els.chkShowConsoleSelected?.checked) {
+      els.chkShowConsoleSelected.checked = false;
+      updateConsoleModeHint();
+      sendRunSettingsPatch({ showConsoleSelected: false });
+    }
+  }
+
+  function updateConsoleSelectedToggle() {
+    const hasSelection = !!state.logFilterServiceId;
+    if (!els.chkShowConsoleSelected) return;
+    els.chkShowConsoleSelected.disabled = !hasSelection;
+    const label = els.chkShowConsoleSelected.closest(".console-mode-toggle")?.querySelector("span");
+    if (label && !hasSelection) {
+      label.title = t("console.cmdSelectService");
+    } else if (label) {
+      label.removeAttribute("title");
+    }
+  }
+
+  function sendRunSettingsPatch(patch) {
+    Bridge.send("saveRunSettings", patch);
+  }
+
+  function applyRunSettings(payload) {
+    if (!payload) return;
+    if (els.chkShowConsoleAll) {
+      els.chkShowConsoleAll.checked = !!payload.showConsoleWindow;
+    }
+    if (els.chkShowConsoleSelected) {
+      els.chkShowConsoleSelected.checked = !!payload.showConsoleSelected;
+    }
+    if (payload.consoleSelectedServiceId && !state.logFilterServiceId) {
+      setLogFilterValue(payload.consoleSelectedServiceId, findServiceName(payload.consoleSelectedServiceId), true);
+    }
+    updateConsoleSelectedToggle();
+    updateConsoleModeHint();
   }
 
   function closeLogFilterMenu() {
@@ -519,15 +564,32 @@
     state.logHistory.push(payload);
   }
 
+  function resolveLogLevel(payload) {
+    const raw = (payload.level || "info").toLowerCase();
+    const msg = payload.message || "";
+
+    if (raw === "error" || raw === "fail" || raw === "failed") return "error";
+    if (raw === "warning" || raw === "warn") return "warning";
+    if (raw === "success") return "success";
+
+    if (/\b(error|failed|failure|exception|fatal|lỗi|thất bại)\b/i.test(msg)) return "error";
+    if (/\b(warning|warn|cảnh báo)\b/i.test(msg)) return "warning";
+
+    return "info";
+  }
+
   function createLogLineElement(payload) {
     const line = document.createElement("div");
-    line.className = `log-line ${payload.level || "info"}`;
+    const level = resolveLogLevel(payload);
+    line.className = `log-line log-${level}`;
     const msg = payload.message || "";
-    if (msg.toLowerCase().includes("stopped") || msg.includes("đã dừng") || msg.includes("đã thoát")) {
-      line.classList.add("status-stopped");
-    }
-    if (msg.toLowerCase().includes("running") || msg.includes("đang chạy")) {
-      line.classList.add("status-running");
+    if (level === "info") {
+      if (msg.toLowerCase().includes("stopped") || msg.includes("đã dừng") || msg.includes("đã thoát")) {
+        line.classList.add("status-stopped");
+      }
+      if (msg.toLowerCase().includes("running") || msg.includes("đang chạy")) {
+        line.classList.add("status-running");
+      }
     }
     const svcTag = payload.serviceName
       ? `<span class="log-svc">[${escapeHtml(payload.serviceName)}]</span> `
@@ -538,10 +600,11 @@
 
   function renderLogFilterEmptyHint(filterId) {
     const name = findServiceName(filterId);
-    const cmdMode = !!(els.chkShowConsole && els.chkShowConsole.checked);
+    const cmdAll = !!(els.chkShowConsoleAll && els.chkShowConsoleAll.checked);
+    const cmdSelected = !!(els.chkShowConsoleSelected && els.chkShowConsoleSelected.checked);
     const hint = document.createElement("div");
     hint.className = "log-line info log-filter-empty";
-    hint.textContent = cmdMode
+    hint.textContent = (cmdAll || cmdSelected)
       ? t("console.logEmptyCmd", { name })
       : t("console.logEmpty", { name });
     return hint;
@@ -592,9 +655,11 @@
     });
 
     if (current && all.some((s) => s.id === current)) {
-      setLogFilterValue(current, findServiceName(current));
+      setLogFilterValue(current, findServiceName(current), true);
     } else if (!current) {
-      setLogFilterValue("", t("console.allServices"));
+      setLogFilterValue("", t("console.allServices"), true);
+    } else {
+      updateConsoleSelectedToggle();
     }
   }
 
@@ -623,10 +688,6 @@
     if (els.globalScopeBadge) {
       els.globalScopeBadge.textContent = isFe ? t("category.fe") : t("category.be");
       els.globalScopeBadge.classList.toggle("fe", isFe);
-    }
-
-    if (els.consoleSection) {
-      els.consoleSection.classList.toggle("hidden", state.view !== "dashboard");
     }
   }
 
@@ -1044,10 +1105,15 @@
     });
     if (ok === "yes") Bridge.send("stopAll");
   };
-  function updateConsoleModeHint(showExternal) {
+  function updateConsoleModeHint() {
     if (!els.consoleModeHint) return;
-    if (showExternal) {
-      els.consoleModeHint.textContent = t("console.cmdHint");
+    const allOn = !!(els.chkShowConsoleAll && els.chkShowConsoleAll.checked);
+    const selectedOn = !!(els.chkShowConsoleSelected && els.chkShowConsoleSelected.checked);
+    if (allOn) {
+      els.consoleModeHint.textContent = t("console.cmdHintAll");
+      els.consoleModeHint.classList.remove("hidden");
+    } else if (selectedOn) {
+      els.consoleModeHint.textContent = t("console.cmdHintSelected");
       els.consoleModeHint.classList.remove("hidden");
     } else {
       els.consoleModeHint.textContent = "";
@@ -1100,10 +1166,33 @@
     });
   }
 
-  if (els.chkShowConsole) {
-    els.chkShowConsole.onchange = () => {
-      updateConsoleModeHint(els.chkShowConsole.checked);
-      Bridge.send("saveRunSettings", { showConsoleWindow: els.chkShowConsole.checked });
+  if (els.chkShowConsoleAll) {
+    els.chkShowConsoleAll.onchange = () => {
+      if (els.chkShowConsoleAll.checked && els.chkShowConsoleSelected) {
+        els.chkShowConsoleSelected.checked = false;
+      }
+      updateConsoleModeHint();
+      sendRunSettingsPatch({
+        showConsoleWindow: els.chkShowConsoleAll.checked,
+        showConsoleSelected: false
+      });
+    };
+  }
+  if (els.chkShowConsoleSelected) {
+    els.chkShowConsoleSelected.onchange = () => {
+      if (els.chkShowConsoleSelected.checked) {
+        if (els.chkShowConsoleAll) els.chkShowConsoleAll.checked = false;
+        if (!state.logFilterServiceId) {
+          els.chkShowConsoleSelected.checked = false;
+          return;
+        }
+      }
+      updateConsoleModeHint();
+      sendRunSettingsPatch({
+        showConsoleWindow: false,
+        showConsoleSelected: els.chkShowConsoleSelected.checked,
+        consoleSelectedServiceId: els.chkShowConsoleSelected.checked ? state.logFilterServiceId : null
+      });
     };
   }
   if (els.logFilterBtn) {
@@ -1197,10 +1286,7 @@
       state.workspace = payload.workspace;
       renderWorkspaceBanner(payload.workspace);
     }
-    if (payload.runSettings && els.chkShowConsole) {
-      els.chkShowConsole.checked = !!payload.runSettings.showConsoleWindow;
-      updateConsoleModeHint(els.chkShowConsole.checked);
-    }
+    if (payload.runSettings) applyRunSettings(payload.runSettings);
     renderPlatforms();
     applyTheme();
     initConsoleResize();
@@ -1249,12 +1335,7 @@
     loadBackupPreview();
   });
 
-  Bridge.on("runSettings", (payload) => {
-    if (els.chkShowConsole) {
-      els.chkShowConsole.checked = !!payload.showConsoleWindow;
-      updateConsoleModeHint(els.chkShowConsole.checked);
-    }
-  });
+  Bridge.on("runSettings", applyRunSettings);
 
   Bridge.on("log", appendLog);
 

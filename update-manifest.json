@@ -1,6 +1,6 @@
 ﻿{
-    "version":  "1.0.0",
-    "releasedAt":  "2026-06-21",
-    "downloadUrl":  "",
-    "releaseNotes":  "Apply config ghi thang appsettings.json va env.js source; scrub file bao mat khoi zip"
+    "version":  "1.1.0",
+    "releasedAt":  "2026-06-22",
+    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.1.0/Win_Trung-MicroservicesControlPanel.zip",
+    "releaseNotes":  "Console log moi tab; log loi/canh bao mau; CMD tat ca vs CMD dang chon"
 }

@@ -1016,8 +1016,17 @@ textarea {
 .console-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.console-cmd-toggles {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .log-filter {
@@ -1093,16 +1102,22 @@ textarea {
 }
 
 .console-mode-toggle {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   text-transform: none;
   letter-spacing: 0;
   cursor: pointer;
   color: var(--text-secondary);
   user-select: none;
+  white-space: nowrap;
+}
+
+.console-mode-toggle:has(input:disabled) {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .console-mode-toggle input {
@@ -1123,7 +1138,7 @@ textarea {
   line-height: 1.6;
 }
 
-.log-line { padding: 2px 0; animation: logIn 0.15s ease; }
+.log-line { padding: 2px 0; animation: logIn 0.15s ease; line-height: 1.45; }
 @keyframes logIn {
   from { opacity: 0; transform: translateX(-4px); }
   to { opacity: 1; transform: translateX(0); }
@@ -1131,8 +1146,12 @@ textarea {
 
 .log-line.info { color: var(--text-secondary); }
 .log-line.success, .log-line.status-running { color: var(--success); }
-.log-line.warning, .log-line.status-stopped { color: var(--warning); }
-.log-line.error { color: var(--danger); }
+.log-line.warning, .log-line.log-warning, .log-line.status-stopped { color: var(--warning); font-weight: 500; }
+.log-line.error, .log-line.log-error { color: var(--danger); font-weight: 600; }
+.log-line.error .log-svc,
+.log-line.log-error .log-svc { color: var(--danger); }
+.log-line.warning .log-svc,
+.log-line.log-warning .log-svc { color: var(--warning); }
 .log-filter-empty {
   color: var(--text-muted);
   font-style: italic;

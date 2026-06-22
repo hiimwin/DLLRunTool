@@ -37,6 +37,12 @@ public class BridgeRequest
     [JsonPropertyName("showConsoleWindow")]
     public bool? ShowConsoleWindow { get; set; }
 
+    [JsonPropertyName("showConsoleSelected")]
+    public bool? ShowConsoleSelected { get; set; }
+
+    [JsonPropertyName("consoleSelectedServiceId")]
+    public string? ConsoleSelectedServiceId { get; set; }
+
     [JsonPropertyName("locked")]
     public bool? Locked { get; set; }
 

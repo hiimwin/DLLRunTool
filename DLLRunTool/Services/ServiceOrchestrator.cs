@@ -198,7 +198,7 @@ public sealed class ServiceOrchestrator
                     SendRunSettings();
                     break;
                 case "saveRunSettings":
-                    SaveRunSettings(request.ShowConsoleWindow ?? false);
+                    SaveRunSettings(request);
                     break;
                 case "stopAll":
                     StopAllServices();
@@ -235,7 +235,12 @@ public sealed class ServiceOrchestrator
                 appTitle = AppTitle,
                 appVersion = AppVersionInfo.Current,
                 workspace = BuildWorkspacePayload(),
-                runSettings = new { showConsoleWindow = RunSettingsStore.ShowConsoleWindow }
+                runSettings = new
+                {
+                    showConsoleWindow = RunSettingsStore.ShowConsoleWindow,
+                    showConsoleSelected = RunSettingsStore.ShowConsoleSelected,
+                    consoleSelectedServiceId = RunSettingsStore.ConsoleSelectedServiceId
+                }
             }
         });
         PushServicesList();
@@ -941,30 +946,47 @@ public sealed class ServiceOrchestrator
         _pushToUi(new BridgeResponse
         {
             Type = "runSettings",
-            Payload = new { showConsoleWindow = RunSettingsStore.ShowConsoleWindow }
+            Payload = new
+            {
+                showConsoleWindow = RunSettingsStore.ShowConsoleWindow,
+                showConsoleSelected = RunSettingsStore.ShowConsoleSelected,
+                consoleSelectedServiceId = RunSettingsStore.ConsoleSelectedServiceId
+            }
         });
     }
 
-    private void SaveRunSettings(bool showConsoleWindow)
+    private void SaveRunSettings(BridgeRequest request)
     {
-        RunSettingsStore.SetShowConsoleWindow(showConsoleWindow);
-        _commandRunner.ShowConsoleWindow = showConsoleWindow;
+        var showAll = request.ShowConsoleWindow ?? RunSettingsStore.ShowConsoleWindow;
+        var showSelected = request.ShowConsoleSelected ?? RunSettingsStore.ShowConsoleSelected;
+        var selectedId = request.ConsoleSelectedServiceId ?? RunSettingsStore.ConsoleSelectedServiceId;
 
+        if (request.ShowConsoleWindow == true)
+            showSelected = false;
+        if (request.ShowConsoleSelected == true)
+            showAll = false;
+
+        if (!showSelected)
+            selectedId = null;
+
+        RunSettingsStore.Set(showAll, showSelected, selectedId);
+        _commandRunner.ShowConsoleWindow = showAll;
+
+        ApplyConsoleMirrors(showAll, showSelected, selectedId);
+        SendRunSettings();
+    }
+
+    private void ApplyConsoleMirrors(bool showAll, bool showSelected, string? selectedId)
+    {
         var running = GetActiveServices()
             .Where(s => s.IsRunning && s.ManagedProcess != null && !s.ManagedProcess.HasExited)
             .ToList();
 
-        if (showConsoleWindow)
+        if (showAll)
         {
             foreach (var service in running)
             {
-                var logDir = Path.Combine(AppContext.BaseDirectory, "service-logs");
-                var logPath = Path.Combine(logDir, $"{service.Id}.log");
-                if (!File.Exists(logPath))
-                    logPath = ServiceLogMirror.EnsureLogFile(service.Id, service.Name);
-                else
-                    ServiceLogMirror.Register(service.Id, logPath);
-
+                EnsureServiceLogRegistered(service);
                 ServiceLogMirror.OpenMirror(service.Id, service.Name);
             }
 
@@ -972,21 +994,55 @@ public sealed class ServiceOrchestrator
             {
                 Level = "info",
                 Message = running.Count > 0
-                    ? $"CMD riêng: log vẫn hiện trong Console Log; đã mở {running.Count} cửa sổ mirror cho service đang chạy."
-                    : "CMD riêng: log vẫn hiện trong Console Log; cửa sổ mirror mở khi RUN service."
+                    ? $"CMD tất cả: đã mở {running.Count} cửa sổ mirror — log vẫn hiện trong Console Log."
+                    : "CMD tất cả: cửa sổ mirror mở khi RUN service."
             });
-        }
-        else
-        {
-            ServiceLogMirror.CloseAllMirrors();
-            PushLog(new LogPayload
-            {
-                Level = "info",
-                Message = "Log chỉ hiện trong Console Log bên dưới."
-            });
+            return;
         }
 
-        SendRunSettings();
+        ServiceLogMirror.CloseAllMirrors();
+
+        if (showSelected && !string.IsNullOrWhiteSpace(selectedId))
+        {
+            var service = FindService(selectedId, _activePlatformId)
+                          ?? _platformServices.Values.SelectMany(l => l).FirstOrDefault(s => s.Id == selectedId);
+
+            if (service != null)
+            {
+                EnsureServiceLogRegistered(service);
+                ServiceLogMirror.OpenMirror(service.Id, service.Name);
+                PushLog(new LogPayload
+                {
+                    ServiceId = service.Id,
+                    ServiceName = service.Name,
+                    Level = "info",
+                    Message = $"CMD đang chọn: mirror cho {service.Name} — log vẫn hiện trong Console Log."
+                });
+                return;
+            }
+
+            PushLog(new LogPayload
+            {
+                Level = "warning",
+                Message = "CMD đang chọn: không tìm thấy service trong dropdown."
+            });
+            return;
+        }
+
+        PushLog(new LogPayload
+        {
+            Level = "info",
+            Message = "Log chỉ hiện trong Console Log bên dưới."
+        });
+    }
+
+    private static void EnsureServiceLogRegistered(ServiceConfig service)
+    {
+        var logDir = Path.Combine(AppContext.BaseDirectory, "service-logs");
+        var logPath = Path.Combine(logDir, $"{service.Id}.log");
+        if (!File.Exists(logPath))
+            logPath = ServiceLogMirror.EnsureLogFile(service.Id, service.Name);
+        ServiceLogMirror.Register(service.Id, logPath);
     }
 
     private void PushLog(LogPayload payload)

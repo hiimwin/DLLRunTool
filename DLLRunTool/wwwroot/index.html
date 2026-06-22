@@ -228,10 +228,16 @@
               </div>
             </div>
             <div class="console-header-actions">
-              <label class="console-mode-toggle" data-i18n-title="console.cmdTitle" title="CMD">
-                <input type="checkbox" id="chkShowConsole" />
-                <span data-i18n="console.cmdToggle">Mở CMD riêng</span>
-              </label>
+              <div class="console-cmd-toggles">
+                <label class="console-mode-toggle" data-i18n-title="console.cmdAllTitle" title="CMD tất cả">
+                  <input type="checkbox" id="chkShowConsoleAll" />
+                  <span data-i18n="console.cmdAll">CMD tất cả</span>
+                </label>
+                <label class="console-mode-toggle" data-i18n-title="console.cmdSelectedTitle" title="CMD service đang chọn">
+                  <input type="checkbox" id="chkShowConsoleSelected" disabled />
+                  <span data-i18n="console.cmdSelected">CMD đang chọn</span>
+                </label>
+              </div>
               <button class="btn ghost small" id="btnStopAll" data-i18n="console.stopAll" data-i18n-title="console.stopAllTitle" title="Stop All">Stop All</button>
               <button class="btn ghost small" id="btnClearLog" data-i18n="console.clear">Clear</button>
             </div>

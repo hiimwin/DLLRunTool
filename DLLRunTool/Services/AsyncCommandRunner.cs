@@ -217,15 +217,16 @@ public sealed class AsyncCommandRunner
         AttachLogStreaming(service, process, "run");
         AttachProcessExitHandler(service, process);
 
-        if (ShowConsoleWindow)
+        if (RunSettingsStore.ShouldMirrorService(service.Id))
         {
             ServiceLogMirror.OpenMirror(service.Id, service.Name);
+            var modeLabel = RunSettingsStore.ShowConsoleWindow ? "CMD tất cả" : "CMD đang chọn";
             _emitLog(new LogPayload
             {
                 ServiceId = service.Id,
                 ServiceName = service.Name,
                 Level = "info",
-                Message = $"{service.Name}: log trong tool + CMD riêng (Alt+Tab)."
+                Message = $"{service.Name}: log trong tool + {modeLabel} (Alt+Tab)."
             });
         }
 
