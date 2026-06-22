@@ -4,9 +4,16 @@
   const MESSAGES = {
     vi: {
       appTitle: "Win_Trung - Microservices Control Panel",
-      rail: { services: "Services", theme: "Dark / Light", lang: "Ngôn ngữ / Language" },
+      rail: {
+        services: "Services",
+        handbook: "Handbook",
+        servicesTitle: "Microservices",
+        handbookTitle: "Handbook",
+        theme: "Dark / Light",
+        lang: "Ngôn ngữ / Language"
+      },
       versionBadge: "Phiên bản hiện tại",
-      nav: { main: "Điều hướng chính", dashboard: "Dịch vụ", workspace: "Workspace", global: "Cấu hình chung", backup: "Sao lưu" },
+      nav: { main: "Điều hướng chính", dashboard: "Dịch vụ", handbook: "Handbook", workspace: "Workspace", global: "Cấu hình chung", backup: "Sao lưu" },
       category: { group: "Nhóm", be: "Back-End", fe: "Front-End" },
       hint: {
         dashboardBe: "Danh sách Back-End — dotnet dll --urls / appsettings",
@@ -114,6 +121,9 @@
         banner: "Phát hiện {count} file config có dữ liệu nhạy cảm — cẩn thận khi commit.",
         dismiss: "Ẩn"
       },
+      handbook: {
+        empty: "Chưa có nội dung handbook cho platform này."
+      },
       modal: {
         title: "Cấu hình service",
         type: "Loại",
@@ -165,9 +175,16 @@
     },
     en: {
       appTitle: "Win_Trung - Microservices Control Panel",
-      rail: { services: "Services", theme: "Dark / Light", lang: "Language / Ngôn ngữ" },
+      rail: {
+        services: "Services",
+        handbook: "Handbook",
+        servicesTitle: "Microservices",
+        handbookTitle: "Handbook",
+        theme: "Dark / Light",
+        lang: "Language / Ngôn ngữ"
+      },
       versionBadge: "Current version",
-      nav: { main: "Main navigation", dashboard: "Services", workspace: "Workspace", global: "Global config", backup: "Backup" },
+      nav: { main: "Main navigation", dashboard: "Services", handbook: "Handbook", workspace: "Workspace", global: "Global config", backup: "Backup" },
       category: { group: "Group", be: "Back-End", fe: "Front-End" },
       hint: {
         dashboardBe: "Back-End list — dotnet dll --urls / appsettings",
@@ -274,6 +291,9 @@
       secret: {
         banner: "{count} config file(s) may contain secrets — be careful before commit.",
         dismiss: "Dismiss"
+      },
+      handbook: {
+        empty: "No handbook content for this platform yet."
       },
       modal: {
         title: "Service configuration",

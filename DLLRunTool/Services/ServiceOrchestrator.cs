@@ -1342,6 +1342,8 @@ public sealed class ServiceOrchestrator
         {
             if (!string.IsNullOrWhiteSpace(request.View))
                 state.View = request.View!;
+            if (!string.IsNullOrWhiteSpace(request.LastServiceView))
+                state.LastServiceView = request.LastServiceView!;
             if (!string.IsNullOrWhiteSpace(request.Category))
                 state.Category = request.Category!;
             if (!string.IsNullOrWhiteSpace(request.PlatformId))

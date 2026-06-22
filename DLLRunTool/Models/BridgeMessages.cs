@@ -58,6 +58,9 @@ public class BridgeRequest
     [JsonPropertyName("view")]
     public string? View { get; set; }
 
+    [JsonPropertyName("lastServiceView")]
+    public string? LastServiceView { get; set; }
+
     [JsonPropertyName("logFilterServiceId")]
     public string? LogFilterServiceId { get; set; }
 }

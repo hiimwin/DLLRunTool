@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="hbBgGold" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8E1"/>
+      <stop offset="0.45" stop-color="#FFE082"/>
+      <stop offset="1" stop-color="#F9AB00"/>
+    </linearGradient>
+    <linearGradient id="hbBook" x1="20" y1="14" x2="46" y2="50" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF59D"/>
+      <stop offset="0.4" stop-color="#FFC107"/>
+      <stop offset="1" stop-color="#FF8F00"/>
+    </linearGradient>
+    <radialGradient id="hbShine" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(22 18) rotate(45) scale(20)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#hbBgGold)"/>
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#hbShine)"/>
+  <path d="M18 48V18c0-1.1.9-2 2-2h22a4 4 0 0 1 4 4v28H20a2 2 0 0 0-2 2z" fill="url(#hbBook)" stroke="#E65100" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M24 48V20h18a2 2 0 0 1 2 2v26" stroke="#E65100" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M28 26h14M28 32h11M28 38h14" stroke="#BF360C" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+</svg>

@@ -6,6 +6,8 @@
     platforms: [],
     category: "BE",
     view: "dashboard",
+    railSection: "services",
+    lastServiceView: "dashboard",
     dashboardSig: "",
     dashboardStatusSig: "",
     services: { backEnd: [], frontEnd: [] },
@@ -31,6 +33,10 @@
     platformSwitcher: $("platformSwitcher"),
     dashboardList: $("dashboardList"),
     dashboardView: $("dashboardView"),
+    handbookView: $("handbookView"),
+    handbookTitle: $("handbookTitle"),
+    handbookSubtitle: $("handbookSubtitle"),
+    handbookBody: $("handbookBody"),
     workspaceView: $("workspaceView"),
     globalView: $("globalView"),
     backupView: $("backupView"),
@@ -116,12 +122,17 @@
     updateBannerMessage: $("updateBannerMessage"),
     btnDownloadUpdate: $("btnDownloadUpdate"),
     btnCheckUpdate: $("btnCheckUpdate"),
-    btnDismissUpdate: $("btnDismissUpdate")
+    btnDismissUpdate: $("btnDismissUpdate"),
+    viewTabsNav: $("viewTabsNav"),
+    pageTitle: $("pageTitle"),
+    railServices: $("railServices"),
+    railHandbook: $("railHandbook")
   };
 
   function persistUiState() {
     Bridge.send("saveUiState", {
       view: state.view,
+      lastServiceView: state.lastServiceView,
       category: state.category,
       platformId: state.platformId,
       logFilterServiceId: state.logFilterServiceId || ""
@@ -213,9 +224,11 @@
 
   function refreshI18nDynamic() {
     I18n.applyDom();
+    updateRailChrome();
     updateNavContext();
     if (state.view === "backup" && state.lastBackupPreview) renderBackupPreview(state.lastBackupPreview);
     if (state.view === "global" && state.lastGlobalConfig) renderGlobalConfig(state.lastGlobalConfig);
+    if (state.view === "handbook") renderHandbook();
     if (state.workspace) renderWorkspaceBanner(state.workspace);
     updateLogServiceFilter();
     updateConsoleSelectedToggle();
@@ -352,6 +365,7 @@
     renderPlatforms();
     Bridge.send("selectPlatform", { platformId });
     persistUiState();
+    if (state.view === "handbook") renderHandbook();
     if (state.view === "global") loadGlobalConfig();
     if (state.view === "backup") loadBackupPreview();
   }
@@ -763,8 +777,35 @@
     }
   }
 
+  function renderHandbook() {
+    if (!els.handbookBody) return;
+    const platformId = state.platformId || "loyalty";
+    const content = window.HandbookContent?.[platformId];
+
+    if (!content || content.empty) {
+      const fb = window.HandbookContent?.fptcx;
+      els.handbookTitle.textContent = content?.title || fb?.title || "Handbook";
+      els.handbookSubtitle.textContent = "";
+      els.handbookBody.innerHTML = `
+        <div class="handbook-empty">
+          <p>${escapeHtml(content?.message || fb?.message || t("handbook.empty"))}</p>
+          ${content?.hint || fb?.hint ? `<p class="handbook-note">${escapeHtml(content?.hint || fb?.hint)}</p>` : ""}
+        </div>`;
+      return;
+    }
+
+    els.handbookTitle.textContent = content.title;
+    els.handbookSubtitle.textContent = content.subtitle || "";
+    els.handbookBody.innerHTML = (content.sections || []).map((sec) => `
+      <article class="handbook-section">
+        <h3 class="handbook-section-title">${escapeHtml(sec.title)}</h3>
+        <div class="handbook-section-body">${sec.body}</div>
+      </article>
+    `).join("");
+  }
+
   function updateNavContext() {
-    const showCategory = state.view === "dashboard" || state.view === "global";
+    const showCategory = state.railSection === "services" && (state.view === "dashboard" || state.view === "global");
     const isFe = state.category === "FE";
 
     if (els.contextBar) {
@@ -791,18 +832,57 @@
     }
   }
 
+  function updateRailChrome() {
+    const isHandbook = state.railSection === "handbook";
+    if (els.viewTabsNav) els.viewTabsNav.classList.toggle("hidden", isHandbook);
+    if (els.pageTitle) {
+      els.pageTitle.textContent = isHandbook ? t("rail.handbookTitle") : t("rail.servicesTitle");
+    }
+    if (els.railServices) els.railServices.classList.toggle("active", !isHandbook);
+    if (els.railHandbook) els.railHandbook.classList.toggle("active", isHandbook);
+  }
+
+  function switchRail(section, silent = false) {
+    state.railSection = section;
+    if (section === "handbook") {
+      state.view = "handbook";
+      els.dashboardView.classList.add("hidden");
+      els.workspaceView.classList.add("hidden");
+      els.globalView.classList.add("hidden");
+      els.backupView.classList.add("hidden");
+      els.handbookView.classList.remove("hidden");
+      renderHandbook();
+      updateRailChrome();
+      updateNavContext();
+      if (!silent) persistUiState();
+      return;
+    }
+
+    updateRailChrome();
+    switchView(state.lastServiceView || "dashboard", silent);
+  }
+
   function switchView(view, silent = false) {
+    if (view === "handbook") {
+      switchRail("handbook", silent);
+      return;
+    }
+
+    state.lastServiceView = view;
+    state.railSection = "services";
     state.view = view;
-    document.querySelectorAll(".view-tab").forEach((t) => {
-      t.classList.toggle("active", t.dataset.view === view);
+    document.querySelectorAll(".view-tab").forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.view === view);
     });
     els.dashboardView.classList.toggle("hidden", view !== "dashboard");
+    els.handbookView.classList.add("hidden");
     els.workspaceView.classList.toggle("hidden", view !== "workspace");
     els.globalView.classList.toggle("hidden", view !== "global");
     els.backupView.classList.toggle("hidden", view !== "backup");
     if (view === "global") loadGlobalConfig();
     if (view === "backup") loadBackupPreview();
     if (view === "workspace") loadWorkspacePaths();
+    updateRailChrome();
     updateNavContext();
     if (!silent) persistUiState();
   }
@@ -935,6 +1015,9 @@
       document.querySelectorAll(".category-tab").forEach((tab) => {
         tab.classList.toggle("active", tab.dataset.category === state.category);
       });
+    }
+    if (uiState.lastServiceView) {
+      state.lastServiceView = uiState.lastServiceView;
     }
     if (uiState.view) {
       switchView(uiState.view, true);
@@ -1236,6 +1319,13 @@
     tab.addEventListener("click", () => switchView(tab.dataset.view));
   });
 
+  if (els.railServices) {
+    els.railServices.onclick = () => switchRail("services");
+  }
+  if (els.railHandbook) {
+    els.railHandbook.onclick = () => switchRail("handbook");
+  }
+
   els.themeToggle.onclick = () => {
     state.theme = state.theme === "dark" ? "light" : "dark";
     applyTheme();
@@ -1480,6 +1570,7 @@
     renderPlatforms();
     applyTheme();
     initConsoleResize();
+    updateRailChrome();
     updateNavContext();
   });
 

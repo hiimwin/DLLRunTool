@@ -108,6 +108,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 6px;
   padding: 12px 0;
   flex-shrink: 0;
 }
@@ -130,6 +131,14 @@ body {
   width: 44px;
   height: 44px;
   padding: 6px;
+}
+.rail-brand.active {
+  background: transparent;
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+.rail-brand:hover {
+  background: transparent;
+  opacity: 0.92;
 }
 .rail-logo {
   width: 100%;
@@ -1587,6 +1596,221 @@ textarea {
 .row-btn-spacer.is-locked {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.handbook-panel .handbook-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.handbook-section {
+  padding: 16px 18px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.handbook-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px;
+  color: var(--text-primary);
+}
+
+.handbook-section-body {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.handbook-section-body code {
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg-row);
+  color: var(--accent);
+}
+
+.handbook-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.handbook-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: "Roboto", monospace;
+  font-size: 12px;
+}
+
+.handbook-tree-item.indent-1 { padding-left: 16px; }
+.handbook-tree-item.indent-2 { padding-left: 32px; color: var(--text-muted); }
+
+.handbook-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.handbook-flow-step {
+  padding: 8px 14px;
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.handbook-flow-port {
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.handbook-flow-tag {
+  margin-left: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.handbook-flow-arrow {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-left: 12px;
+}
+
+.handbook-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.handbook-table th,
+.handbook-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.handbook-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.handbook-table-compact td:first-child {
+  font-family: monospace;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.handbook-ol,
+.handbook-ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.handbook-ol li,
+.handbook-ul li {
+  margin-bottom: 6px;
+}
+
+.handbook-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.handbook-empty p:first-child {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.handbook-solution {
+  font-family: "Cascadia Code", "Consolas", "Roboto Mono", monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  overflow-x: auto;
+}
+
+.handbook-solution-folder {
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.handbook-solution-folder.root {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.handbook-solution-item {
+  padding-left: 18px;
+  color: var(--text-muted);
+}
+
+.handbook-solution-item.cs {
+  color: var(--accent);
+}
+
+.handbook-solution-item.host {
+  color: var(--purple);
+  font-weight: 500;
+}
+
+.handbook-callout {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--purple);
+  background: var(--accent-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.handbook-callout strong {
+  color: var(--text-primary);
+}
+
+.handbook-layer-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.handbook-layer-chip {
+  padding: 6px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.handbook-layer-arrow {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .app-dialog-overlay {

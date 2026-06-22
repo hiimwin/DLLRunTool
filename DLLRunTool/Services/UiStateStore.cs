@@ -5,6 +5,7 @@ namespace DLLRunTool.Services;
 public sealed class UiState
 {
     public string View { get; set; } = "dashboard";
+    public string LastServiceView { get; set; } = "dashboard";
     public string Category { get; set; } = "BE";
     public string PlatformId { get; set; } = "loyalty";
     public string LogFilterServiceId { get; set; } = "";
