@@ -891,6 +891,11 @@ body {
   opacity: 0.35;
 }
 
+.service-row-actions > .row-btn.clean-btn.row-btn-spacer {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .service-row-actions-tools > .row-btn {
   width: 100%;
   min-width: 0;
