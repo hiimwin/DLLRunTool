@@ -138,8 +138,16 @@ if (Test-Path $manifestPath) {
     try { $existingManifest = Get-Content $manifestPath -Raw | ConvertFrom-Json -AsHashtable } catch { }
 }
 
+$defaultDownloadUrl = "https://github.com/hiimwin/DLLRunTool/releases/download/v$Version/Win_Trung-MicroservicesControlPanel.zip"
+
 if ([string]::IsNullOrWhiteSpace($DownloadUrl) -and $existingManifest.downloadUrl) {
     $DownloadUrl = [string]$existingManifest.downloadUrl
+}
+if ([string]::IsNullOrWhiteSpace($DownloadUrl)) {
+    $DownloadUrl = $defaultDownloadUrl
+} elseif ($DownloadUrl -notmatch [regex]::Escape("/v$Version/")) {
+    Write-Host "==> downloadUrl khong khop version v$Version — cap nhat ve URL mac dinh" -ForegroundColor Yellow
+    $DownloadUrl = $defaultDownloadUrl
 }
 if ([string]::IsNullOrWhiteSpace($ReleaseNotes) -and $existingManifest.releaseNotes) {
     $ReleaseNotes = [string]$existingManifest.releaseNotes
