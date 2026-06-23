@@ -1,6 +1,6 @@
 {
-  "version": "1.2.6",
-  "releasedAt": "2026-06-22",
-  "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.6/Win_Trung-MicroservicesControlPanel.zip",
-  "releaseNotes": "Handbook tab tren icon rail; tai lieu kien truc LoyaltyPlatform (MasterData, luong request, thu tu chay local)"
+  "version": "1.2.7",
+  "releasedAt": "2026-06-23",
+  "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.7/Win_Trung-MicroservicesControlPanel.zip",
+  "releaseNotes": "Fix export JSON error; apply backup giu ConnectionStrings/StringEncryption; patch connection string per-key"
 }

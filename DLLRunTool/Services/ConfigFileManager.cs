@@ -269,27 +269,8 @@ public static class ConfigFileManager
     private static async Task SaveConnectionStringAsync(string appsettingsPath, string connectionString, CancellationToken ct)
     {
         var json = await File.ReadAllTextAsync(appsettingsPath, ct).ConfigureAwait(false);
-        var node = ConfigSecretsHelper.ParseJsonObject(json)
-                   ?? throw new InvalidOperationException("appsettings.json không hợp lệ.");
-
-        if (node["ConnectionStrings"] is not JsonObject conn)
-        {
-            conn = new JsonObject();
-            node["ConnectionStrings"] = conn;
-        }
-
-        if (conn.Count > 0)
-        {
-            foreach (var key in conn.Select(p => p.Key).ToList())
-                conn[key] = connectionString;
-        }
-        else
-        {
-            conn["Default"] = connectionString;
-        }
-
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        await File.WriteAllTextAsync(appsettingsPath, node.ToJsonString(options), ct).ConfigureAwait(false);
+        var patched = ConfigSecretsHelper.PatchConnectionStrings(json, connectionString);
+        await File.WriteAllTextAsync(appsettingsPath, patched, ct).ConfigureAwait(false);
     }
 
     /// <summary>Gộp ConnectionStrings từ backup secrets (legacy) vào appsettings.json source.</summary>

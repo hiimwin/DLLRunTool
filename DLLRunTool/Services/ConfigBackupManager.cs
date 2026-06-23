@@ -59,15 +59,24 @@ public static class ConfigBackupManager
             }
             else
             {
-                var node = ConfigSecretsHelper.ParseJsonObject(content);
-                if (node != null)
+                try
                 {
-                    ConfigSecretsHelper.RedactServiceUiConfigJson(node);
-                    package.GlobalConfigs[category] = node.ToJsonString(JsonOptions);
+                    var node = ConfigSecretsHelper.ParseJsonObject(content);
+                    if (node != null)
+                    {
+                        ConfigSecretsHelper.RedactServiceUiConfigJson(node);
+                        package.GlobalConfigs[category] = node.ToJsonString(JsonOptions);
+                    }
+                    else
+                    {
+                        package.GlobalConfigs[category] = content;
+                    }
                 }
-                else
+                catch (JsonException ex)
                 {
-                    package.GlobalConfigs[category] = content;
+                    var line = ex.LineNumber.HasValue ? $" (dòng {ex.LineNumber})" : "";
+                    throw new InvalidOperationException(
+                        $"JSON không hợp lệ trong global config {globalPath}{line}: {ex.Message}", ex);
                 }
             }
         }
@@ -111,10 +120,19 @@ public static class ConfigBackupManager
 
             if (!preserveFull)
             {
-                if (key.StartsWith("appsettings", StringComparison.OrdinalIgnoreCase))
-                    content = ConfigSecretsHelper.SanitizeAppSettingsForBackup(content);
-                else if (key.Equals("env.js", StringComparison.OrdinalIgnoreCase))
-                    content = SanitizeEnvJsForExport(content);
+                try
+                {
+                    if (key.StartsWith("appsettings", StringComparison.OrdinalIgnoreCase))
+                        content = ConfigSecretsHelper.SanitizeAppSettingsForBackup(content);
+                    else if (key.Equals("env.js", StringComparison.OrdinalIgnoreCase))
+                        content = SanitizeEnvJsForExport(content);
+                }
+                catch (JsonException ex)
+                {
+                    var line = ex.LineNumber.HasValue ? $" (dòng {ex.LineNumber})" : "";
+                    throw new InvalidOperationException(
+                        $"JSON không hợp lệ trong {path}{line}: {ex.Message}", ex);
+                }
             }
 
             entry.ConfigFiles[key] = content;
@@ -200,6 +218,13 @@ public static class ConfigBackupManager
     {
         var result = new ImportResultDto();
         var affectedServices = new HashSet<ServiceConfig>();
+        var isExportBackup = string.Equals(package.Source, "export", StringComparison.OrdinalIgnoreCase);
+
+        if (isExportBackup && !dryRun)
+        {
+            result.Messages.Add(
+                "[Lưu ý] Backup export đã loại secrets — ConnectionStrings/StringEncryption/AbpLicenseCode giữ từ source hiện tại nếu backup không có.");
+        }
 
         foreach (var (category, content) in package.GlobalConfigs)
         {
@@ -301,29 +326,33 @@ public static class ConfigBackupManager
 
                 Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
 
-                if (File.Exists(targetPath))
+                var existingContent = File.Exists(targetPath)
+                    ? await File.ReadAllTextAsync(targetPath, ct).ConfigureAwait(false)
+                    : null;
+
+                var writeContent = IsAppSettingsFile(key)
+                    ? ConfigSecretsHelper.MergeAppSettingsForApply(existingContent, content)
+                    : content;
+
+                if (existingContent != null && ConfigContentComparer.AreEqual(existingContent, writeContent, key))
                 {
-                    var existing = await File.ReadAllTextAsync(targetPath, ct).ConfigureAwait(false);
-                    if (ConfigContentComparer.AreEqual(existing, content, key))
-                    {
-                        result.UnchangedCount++;
-                        result.AppliedCount++;
-                        var note = ConfigContentComparer.IsJsonFile(key) &&
-                                   !string.Equals(
-                                       ConfigContentComparer.NormalizeNewlines(existing),
-                                       ConfigContentComparer.NormalizeNewlines(content),
-                                       StringComparison.Ordinal)
-                            ? " (JSON giống, khác format)"
-                            : "";
-                        result.Messages.Add($"[Giữ nguyên] {entry.Name} → {key}{note}");
-                        continue;
-                    }
+                    result.UnchangedCount++;
+                    result.AppliedCount++;
+                    var note = ConfigContentComparer.IsJsonFile(key) &&
+                               !string.Equals(
+                                   ConfigContentComparer.NormalizeNewlines(existingContent),
+                                   ConfigContentComparer.NormalizeNewlines(writeContent),
+                                   StringComparison.Ordinal)
+                        ? " (JSON giống, khác format)"
+                        : "";
+                    result.Messages.Add($"[Giữ nguyên] {entry.Name} → {key}{note}");
+                    continue;
                 }
 
-                if (key.Equals("appsettings.json", StringComparison.OrdinalIgnoreCase))
+                if (IsAppSettingsFile(key))
                 {
                     if (!dryRun)
-                        await ConfigFileManager.WriteAppSettingsToSourceAsync(targetPath, content, ct).ConfigureAwait(false);
+                        await ConfigFileManager.WriteAppSettingsToSourceAsync(targetPath, writeContent, ct).ConfigureAwait(false);
                 }
                 else if (key.Equals("appsettings.secrets.json", StringComparison.OrdinalIgnoreCase))
                 {
@@ -404,6 +433,11 @@ public static class ConfigBackupManager
 
     private static string? ResolveApplyTargetPath(ServiceConfig service, string key) =>
         service.ResolveExpectedSourceConfigPath(key);
+
+    private static bool IsAppSettingsFile(string key) =>
+        key.StartsWith("appsettings", StringComparison.OrdinalIgnoreCase) &&
+        key.EndsWith(".json", StringComparison.OrdinalIgnoreCase) &&
+        !key.Contains("secrets", StringComparison.OrdinalIgnoreCase);
 
     public static List<BackupFileInfoDto> ListRecentBackups(string? platformId = null, int max = 20)
     {
