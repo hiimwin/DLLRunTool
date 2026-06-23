@@ -221,21 +221,29 @@ public sealed class AsyncCommandRunner
         if (service.IsFrontEnd)
             return new ResolvedRunCommand("cmd.exe", "/c npm run start", service.ResolveProjectPath());
 
-        var url = string.IsNullOrWhiteSpace(service.Url) ? "" : $" --urls \"{service.Url}\"";
         var dllPath = service.FindDllOutputPath();
-        var workDir = service.ResolveRunWorkingDirectory();
-
         if (dllPath != null && File.Exists(dllPath))
         {
-            // Chạy tay: cd bin\Debug\netX.0 && dotnet Service.dll --urls "..."
-            // Không dùng dotnet run / dotnet exec — tránh ABP license.
+            // Chạy từ thư mục project (ContentRoot = source) — ABP Development localization
+            // và appsettings khớp tool. Không dùng dotnet run / dotnet exec — tránh ABP license.
+            var projectDir = service.ResolveSourceProjectPath();
+            var urlPart = string.IsNullOrWhiteSpace(service.Url) ? "" : $" --urls \"{service.Url}\"";
+            if (!string.IsNullOrWhiteSpace(projectDir) &&
+                Directory.Exists(projectDir) &&
+                dllPath.StartsWith(projectDir, StringComparison.OrdinalIgnoreCase))
+            {
+                var relativeDll = Path.GetRelativePath(projectDir, dllPath);
+                return new ResolvedRunCommand("dotnet", $"{relativeDll}{urlPart}", projectDir);
+            }
+
             var dllFileName = Path.GetFileName(dllPath);
-            return new ResolvedRunCommand("dotnet", $"{dllFileName}{url}", workDir);
+            var workDir = Path.GetDirectoryName(dllPath)!;
+            return new ResolvedRunCommand("dotnet", $"{dllFileName}{urlPart}", workDir);
         }
 
         throw new InvalidOperationException(
             $"Chưa có {service.DllName} trong bin. Hãy Build trước.\n" +
-            $"Chạy đúng: cd \"{workDir}\" && dotnet {service.DllName}{url}");
+            $"Chạy đúng: cd \"{service.ResolveSourceProjectPath()}\" && dotnet bin\\Debug\\...\\{service.DllName}");
     }
 
     private static void EnsureWorkingDirectory(string workingDir, string serviceName)

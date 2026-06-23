@@ -42,7 +42,7 @@
         browse: "Browse...",
         openPaths: "Cấu hình đường dẫn",
         runTitle: "Tùy chọn chạy service",
-        runDesc: "Biến môi trường áp dụng mỗi lần RUN (dotnet dll). Không liên quan appsettings hay ABP license login.",
+        runDesc: "Biến môi trường áp dụng mỗi lần RUN. BE chạy từ thư mục project (không cd bin) để ABP Development hoạt động đúng.",
         saveRun: "Lưu tùy chọn chạy",
         cleanBinBeforeBuild: "Xóa bin/obj trước mỗi lần Build"
       },
@@ -220,7 +220,7 @@
         browse: "Browse...",
         openPaths: "Configure paths",
         runTitle: "Service run options",
-        runDesc: "Environment variables applied on every RUN (dotnet dll). Not appsettings or ABP license login.",
+        runDesc: "Environment variables applied on every RUN. BE runs from project folder (not bin) so ABP Development paths resolve correctly.",
         saveRun: "Save run options",
         cleanBinBeforeBuild: "Delete bin/obj before each Build"
       },

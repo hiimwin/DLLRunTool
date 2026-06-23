@@ -56,7 +56,7 @@ function Test-NoCoAuthorCursor {
 }
 
 function Commit-Clean([string]$Message) {
-    Invoke-Git @("add", "update-manifest.json", "DLLRunTool/", "scripts/", ".gitignore", "release.bat") | Out-Null
+    Invoke-Git @("add", "update-manifest.json", "DLLRunTool/", "scripts/", "README.md", "README-user.md", ".gitignore", "release.bat") | Out-Null
     $parent = Invoke-Git @("rev-parse", "HEAD")
     $tree = Invoke-Git @("write-tree")
     $msgFile = [IO.Path]::GetTempFileName()
@@ -121,7 +121,7 @@ $env:GIT_COMMITTER_EMAIL = $AuthorEmail
 $dirty = Invoke-Git @("status", "--porcelain")
 if ($dirty) {
     Write-Host "==> Commit source changes..." -ForegroundColor Cyan
-    Commit-Clean "Add release automation scripts (release-full.ps1, release.bat)."
+    Commit-Clean "Release v${Version}: $ReleaseNotes"
     & (Join-Path $PSScriptRoot "rewrite-unpushed-clean.ps1")
     Test-NoCoAuthorCursor
 }

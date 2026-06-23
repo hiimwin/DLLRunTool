@@ -6,7 +6,7 @@ Tool chạy / dừng / build microservices local (Back-End + Front-End).
 
 1. Giải nén zip vào thư mục cố định (ví dụ `C:\Tools\MCP`).
 2. Mở **DLLRunTool.exe**.
-3. Tab **Workspace** → cấu hình `loyaltyRoot`, `redisPath`, … → **Lưu**.
+3. Tab **Workspace** → cấu hình `loyaltyRoot`, `redisPath`, … → **Lưu**; (tuỳ chọn) chỉnh biến môi trường RUN → **Lưu tùy chọn chạy**.
 4. Tab **Dịch vụ** → Run theo thứ tự: Redis → AuthServer → các BE → Gateway → FE.
 
 ## Console log
@@ -21,6 +21,15 @@ Tool chạy / dừng / build microservices local (Back-End + Front-End).
 - Đang chờ / thử lại: LED vàng hoặc tím + dòng trạng thái (vd. *Health chưa OK — thử lại 1/3*).
 - Redis và exe: không check health.
 - Service không có endpoint health: hiện *Không có endpoint health* — process vẫn chạy bình thường.
+
+## Clean bin / Build
+
+- Nút **thùng rác** (ngoài cùng bên phải): xóa `bin` + `obj` — phải **Stop** service trước.
+- Tab **Workspace** → bật *Xóa bin/obj trước mỗi lần Build* nếu muốn build sạch.
+
+## Hạ tầng local
+
+- Bật **RabbitMQ** và **Redis** (Docker) trước khi chạy AuthServer, Identity và các BE ABP.
 
 ## Auto-update
 

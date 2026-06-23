@@ -330,6 +330,21 @@
     </button>`;
   }
 
+  function renderRestartButton(svc) {
+    const busy = isServiceBusy(svc);
+    return `<button class="row-btn secondary icon-only${busy ? " is-busy" : ""}" data-action="restart" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.restart"))}"${busy ? " disabled" : ""}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    </button>`;
+  }
+
+  function renderCleanBinButton(svc) {
+    if (svc.isExe || svc.type === "FE") return "";
+    const busy = isServiceBusy(svc) || svc.isRunning;
+    return `<button class="row-btn icon-only clean-btn${busy ? " is-busy" : ""}" data-action="cleanBin" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.cleanBinTitle"))}"${busy ? " disabled" : ""}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+    </button>`;
+  }
+
   function renderBuildButton(svc) {
     const label = escapeHtml(t("btn.build"));
     if (isRunBlocked(svc)) {
@@ -420,9 +435,6 @@
           <div class="service-row-actions-main">
             ${renderBuildButton(svc)}
             ${renderRunStopButton(svc)}
-            <button class="row-btn secondary icon-only${isServiceBusy(svc) ? " is-busy" : ""}" data-action="restart" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.restart"))}"${isServiceBusy(svc) ? " disabled" : ""}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            </button>
           </div>
           <div class="service-row-actions-tools">
             <button class="row-btn icon-only" data-action="logs" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("log.viewService"))}">
@@ -434,11 +446,7 @@
             <button class="row-btn icon-only" data-action="openCmd" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.openCmd"))}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
             </button>
-            ${!svc.isExe && svc.type !== "FE"
-              ? `<button class="row-btn icon-only${isServiceBusy(svc) ? " is-busy" : ""}" data-action="cleanBin" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.cleanBinTitle"))}"${isServiceBusy(svc) || svc.isRunning ? " disabled" : ""}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                </button>`
-              : ""}
+            ${renderRestartButton(svc)}
             <button class="row-btn icon-only lock-btn${svc.isLocked ? " locked" : ""}" data-action="lock" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(svc.isLocked ? t("lock.locked") : t("lock.unlocked"))}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 ${svc.isLocked
@@ -454,6 +462,7 @@
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
                 </button>`}
           </div>
+          ${renderCleanBinButton(svc)}
         </div>
       `;
       els.dashboardList.appendChild(row);
@@ -484,10 +493,16 @@
       if (main && main.children.length >= 2) {
         main.children[0].outerHTML = renderBuildButton(svc);
         main.children[1].outerHTML = renderRunStopButton(svc);
-        const restart = main.querySelector('[data-action="restart"]');
+        const restart = row.querySelector('[data-action="restart"]');
         if (restart) {
           restart.disabled = isServiceBusy(svc);
           restart.classList.toggle("is-busy", isServiceBusy(svc));
+        }
+        const cleanBtn = row.querySelector('[data-action="cleanBin"]');
+        if (cleanBtn) {
+          const cleanBusy = isServiceBusy(svc) || svc.isRunning;
+          cleanBtn.disabled = cleanBusy;
+          cleanBtn.classList.toggle("is-busy", cleanBusy);
         }
         row.querySelectorAll("[data-action]").forEach(wireRowButton);
       }
