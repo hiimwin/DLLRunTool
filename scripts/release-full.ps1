@@ -1,4 +1,4 @@
-# Build, commit, push, GitHub Release — end-to-end (author: Trung Le Quang, no sensitive files)
+# Build, commit, push, GitHub Release - end-to-end (author: Trung Le Quang, no sensitive files)
 param(
     [string]$Version = "",
     [string]$ReleaseNotes = "",
@@ -13,11 +13,21 @@ Set-Location $root
 $AuthorName = "Trung Le Quang"
 $AuthorEmail = "TrungLQ@utop.io"
 
+$Git = "C:\Program Files\Git\cmd\git.exe"
+if (-not (Test-Path $Git)) { $Git = "git" }
+
 $gh = "$env:ProgramFiles\GitHub CLI\gh.exe"
 if (-not (Test-Path $gh)) { $gh = "gh" }
 
+function Invoke-Git([string[]]$GitArgs) {
+    $out = & $Git @GitArgs 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "git $($GitArgs -join ' ') failed: $out" }
+    return ($out | Out-String).Trim()
+}
+
 function Test-SensitiveTrackedFiles {
-    $bad = git ls-files | Where-Object {
+    $files = Invoke-Git @("ls-files")
+    $bad = $files -split "`n" | Where-Object {
         $_ -match '(?i)(^|/)paths\.local\.json$' -or
         $_ -match '(?i)global\..*\.secrets\.json$' -or
         $_ -match '(?i)global\..*\.be\.json$' -or
@@ -36,27 +46,31 @@ function Test-SensitiveTrackedFiles {
 }
 
 function Test-NoCoAuthorCursor {
-    $range = "@{upstream}..HEAD"
-    $exists = git rev-parse --verify $range 2>$null
-    if (-not $exists) { return }
-    $msgs = git log $range --format="%B"
+    $upstream = Invoke-Git @("rev-parse", '@{upstream}')
+    $head = Invoke-Git @("rev-parse", "HEAD")
+    if ($upstream -eq $head) { return }
+    $msgs = Invoke-Git @("log", ($upstream + ".." + $head), "--format=%B")
     if ($msgs -match '(?i)co-authored-by:.*cursor') {
-        throw "Commit message contains Cursor co-author — rewrite before push."
+        throw "Commit message contains Cursor co-author - rewrite before push."
     }
 }
 
 function Commit-Clean([string]$Message) {
-    $parent = (git rev-parse HEAD).Trim()
-    $tree = (git write-tree).Trim()
-    $msgFile = Join-Path $env:TEMP "dllruntool-release-msg.txt"
+    Invoke-Git @("add", "update-manifest.json", "DLLRunTool/", "scripts/", ".gitignore", "release.bat") | Out-Null
+    $parent = Invoke-Git @("rev-parse", "HEAD")
+    $tree = Invoke-Git @("write-tree")
+    $msgFile = [IO.Path]::GetTempFileName()
     $utf8NoBom = New-Object System.Text.UTF8Encoding $false
-    [System.IO.File]::WriteAllText($msgFile, $Message.TrimEnd() + "`n", $utf8NoBom)
-    $new = (git commit-tree $tree -p $parent -F $msgFile).Trim()
-    Remove-Item $msgFile -Force -ErrorAction SilentlyContinue
-    if ($new.Length -ne 40) { throw "commit-tree failed: '$new'" }
-    git reset --hard $new | Out-Null
+    [IO.File]::WriteAllText($msgFile, $Message.TrimEnd() + "`n", $utf8NoBom)
+    try {
+        $new = Invoke-Git @("commit-tree", $tree, "-p", $parent, "-F", $msgFile)
+    } finally {
+        if (Test-Path -LiteralPath $msgFile) { Remove-Item -LiteralPath $msgFile -Force }
+    }
+    Invoke-Git @("reset", "--hard", $new) | Out-Null
 }
 
+function Ensure-GhAuth {
     & $gh auth status 2>&1 | Out-Null
     if ($LASTEXITCODE -eq 0) { return }
 
@@ -66,15 +80,14 @@ function Commit-Clean([string]$Message) {
         return
     }
 
-    throw @"
-Chua dang nhap GitHub CLI. Chay mot lan (browser, tai khoan hiimwin):
-  & `"$gh`" auth login -h github.com -p https -w
-Hoac dat bien moi truong GITHUB_TOKEN (PAT co quyen repo) roi chay lai script.
-"@
+    throw "Chua dang nhap GitHub CLI. Chay: $gh auth login -h github.com -p https -w (tai khoan hiimwin). Hoac dat GITHUB_TOKEN."
 }
 
 Write-Host "==> Security check (tracked files)..." -ForegroundColor Cyan
 Test-SensitiveTrackedFiles
+
+Write-Host "==> Strip Cursor co-author from unpushed commits..." -ForegroundColor Cyan
+& (Join-Path $PSScriptRoot "rewrite-unpushed-clean.ps1")
 Test-NoCoAuthorCursor
 
 $project = Join-Path $root "DLLRunTool\DLLRunTool.csproj"
@@ -93,7 +106,7 @@ if ([string]::IsNullOrWhiteSpace($ReleaseNotes)) {
 }
 
 if (-not $SkipBuild) {
-    Write-Host "==> Build & zip v$Version..." -ForegroundColor Cyan
+    Write-Host "==> Build and zip v$Version..." -ForegroundColor Cyan
     & (Join-Path $root "publish.ps1") -Version $Version -DownloadUrl $downloadUrl -ReleaseNotes $ReleaseNotes
 }
 
@@ -105,18 +118,16 @@ $env:GIT_AUTHOR_EMAIL = $AuthorEmail
 $env:GIT_COMMITTER_NAME = $AuthorName
 $env:GIT_COMMITTER_EMAIL = $AuthorEmail
 
-$dirty = git status --porcelain
+$dirty = Invoke-Git @("status", "--porcelain")
 if ($dirty) {
     Write-Host "==> Commit source changes..." -ForegroundColor Cyan
-    git add update-manifest.json DLLRunTool/ scripts/ .gitignore
-    $stillDirty = git diff --cached --quiet; if ($LASTEXITCODE -ne 0) {
-        Commit-Clean "Release $tag`: $ReleaseNotes"
-    }
+    Commit-Clean "Add release automation scripts (release-full.ps1, release.bat)."
+    & (Join-Path $PSScriptRoot "rewrite-unpushed-clean.ps1")
+    Test-NoCoAuthorCursor
 }
 
-Write-Host "==> Push main ($AuthorName <$AuthorEmail>)..." -ForegroundColor Cyan
-git push origin main
-if ($LASTEXITCODE -ne 0) { throw "git push failed" }
+Write-Host "==> Push main ($AuthorName / $AuthorEmail)..." -ForegroundColor Cyan
+Invoke-Git @("push", "origin", "main") | Out-Null
 
 Write-Host "==> GitHub Release $tag..." -ForegroundColor Cyan
 Ensure-GhAuth
@@ -130,8 +141,9 @@ if ($LASTEXITCODE -eq 0) {
 }
 if ($LASTEXITCODE -ne 0) { throw "gh release failed" }
 
+$zipMb = [math]::Round((Get-Item $zip).Length / 1048576, 2)
 Write-Host ""
 Write-Host "Done." -ForegroundColor Green
 Write-Host "  Release: https://github.com/$Repo/releases/tag/$tag"
-Write-Host "  ZIP    : $zip ($([math]::Round((Get-Item $zip).Length / 1MB, 2)) MB)"
-Write-Host "  Author : $AuthorName <$AuthorEmail>"
+Write-Host "  ZIP    : $zip ($zipMb MB)"
+Write-Host "  Author : $AuthorName / $AuthorEmail"
