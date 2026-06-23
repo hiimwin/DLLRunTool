@@ -8,7 +8,8 @@ public static class ConfigBackupManager
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        Encoder = ConfigSecretsHelper.JsonWriteOptions.Encoder
     };
 
     public static string BackupsFolder =>
@@ -29,7 +30,8 @@ public static class ConfigBackupManager
             Source = source
         };
 
-        var preserveFull = string.Equals(source, "local-scan", StringComparison.OrdinalIgnoreCase);
+        // Giữ nguyên appsettings trong backup (quét/export/import round-trip). Chỉ bỏ file *.secrets.json khỏi gói.
+        var preserveFull = true;
 
         foreach (var category in new[] { "be", "fe" })
         {
@@ -223,7 +225,7 @@ public static class ConfigBackupManager
         if (isExportBackup && !dryRun)
         {
             result.Messages.Add(
-                "[Lưu ý] Backup export đã loại secrets — ConnectionStrings/StringEncryption/AbpLicenseCode giữ từ source hiện tại nếu backup không có.");
+                "[Lưu ý] Backup export giữ đủ config — không share file backup ra ngoài (có thể chứa password).");
         }
 
         foreach (var (category, content) in package.GlobalConfigs)

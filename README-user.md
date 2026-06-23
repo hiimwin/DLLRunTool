@@ -50,6 +50,13 @@ $env:MCCP_SIGN_PASSWORD = "..."
 
 Không có cách tắt SmartScreen 100% bằng code nếu **không ký** exe — đó là cơ chế bảo vệ của Windows.
 
+## Export / Import config
+
+- **Quét từ Source**: lưu snapshot config hiện tại.
+- **Export Backup**: file JSON đầy đủ để khôi phục trên **cùng máy** (có ConnectionStrings, LicenseSettings, …).
+- **Apply Import** / **Apply Local**: gộp vào source — giữ đúng `PublicKey`, merge ConnectionStrings từng key.
+- **Không chia sẻ** file `backup-*.json` (có thể chứa password).
+
 ## File local (không xóa khi update)
 
 | File | Mục đích |
@@ -57,9 +64,10 @@ Không có cách tắt SmartScreen 100% bằng code nếu **không ký** exe —
 | `paths.local.json` | Đường dẫn workspace |
 | `global.*.json` | Cấu hình chung |
 | `global.*.secrets.json` | DB password |
-| `backups/` | Export config |
+| `backups/` | Export config (đầy đủ — không share) |
+| `defaults/` | Snapshot quét từ source |
 
 ## Ghi chú
 
 - `services.loyalty.json` mô tả cấu trúc service — mỗi máy trỏ repo qua Workspace Paths.
-- Không chia sẻ file có password.
+- Không chia sẻ file có password (`backup-*.json`, `global.*.secrets.json`).

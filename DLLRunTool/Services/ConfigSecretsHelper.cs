@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -11,11 +12,19 @@ public static class ConfigSecretsHelper
     public static readonly string[] SensitiveAppSettingsKeys =
         ["ConnectionStrings", "StringEncryption", "AbpLicenseCode"];
 
+    public static readonly JsonSerializerOptions JsonWriteOptions = new()
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
     private static readonly JsonDocumentOptions JsonReadOptions = new()
     {
         CommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true
     };
+
+    public static string WriteJsonObject(JsonObject node) => node.ToJsonString(JsonWriteOptions);
 
     public static JsonObject? ParseJsonObject(string json)
     {
@@ -42,7 +51,7 @@ public static class ConfigSecretsHelper
             node.Remove(key);
         }
 
-        var options = new JsonSerializerOptions { WriteIndented = true };
+        var options = JsonWriteOptions;
         return (node.ToJsonString(options), secrets);
     }
 
@@ -53,7 +62,8 @@ public static class ConfigSecretsHelper
     }
 
     /// <summary>
-    /// Gộp backup vào appsettings source — không ghi đè secrets đã bị strip khỏi backup export.
+    /// Gộp backup vào appsettings source — giữ secrets từ source nếu backup export đã strip.
+    /// ConnectionStrings: merge từng key; không Unicode-escape PublicKey (+ giữ nguyên).
     /// </summary>
     public static string MergeAppSettingsForApply(string? existingContent, string backupContent)
     {
@@ -61,18 +71,32 @@ public static class ConfigSecretsHelper
         if (backup == null)
             return existingContent ?? backupContent;
 
-        var existing = ParseJsonObject(existingContent ?? "{}") ?? new JsonObject();
+        if (string.IsNullOrWhiteSpace(existingContent))
+            return WriteJsonObject(backup);
+
+        var existing = ParseJsonObject(existingContent);
+        if (existing == null)
+            return backupContent;
 
         foreach (var prop in backup)
         {
             if (IsSensitiveAppSettingsKey(prop.Key) && !HasSensitiveContent(prop.Key, prop.Value))
                 continue;
 
+            if (prop.Key.Equals("ConnectionStrings", StringComparison.OrdinalIgnoreCase) &&
+                prop.Value is JsonObject backupConn)
+            {
+                var targetConn = existing["ConnectionStrings"] as JsonObject ?? new JsonObject();
+                foreach (var kv in backupConn)
+                    targetConn[kv.Key] = kv.Value?.DeepClone();
+                existing["ConnectionStrings"] = targetConn;
+                continue;
+            }
+
             existing[prop.Key] = prop.Value?.DeepClone();
         }
 
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        return existing.ToJsonString(options);
+        return WriteJsonObject(existing);
     }
 
     /// <summary>Chỉ cập nhật giá trị trong ConnectionStrings — giữ nguyên các key/name hiện có.</summary>
@@ -94,8 +118,7 @@ public static class ConfigSecretsHelper
         }
 
         var patch = new JsonObject { ["ConnectionStrings"] = conn.DeepClone() };
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        return MergeAppSettingsForApply(existingContent, patch.ToJsonString(options));
+        return MergeAppSettingsForApply(existingContent, WriteJsonObject(patch));
     }
 
     private static bool IsSensitiveAppSettingsKey(string key) =>
@@ -128,8 +151,7 @@ public static class ConfigSecretsHelper
             return content;
 
         RedactObject(node);
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        return node.ToJsonString(options);
+        return WriteJsonObject(node);
     }
 
     public static void RedactServiceUiConfigJson(JsonObject node)

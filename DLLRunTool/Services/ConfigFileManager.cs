@@ -215,7 +215,7 @@ public static class ConfigFileManager
             iisExpress["applicationUrl"] = $"http://localhost:{uri.Port}/";
         }
 
-        var options = new JsonSerializerOptions { WriteIndented = true };
+        var options = ConfigSecretsHelper.JsonWriteOptions;
         await File.WriteAllTextAsync(path, node.ToJsonString(options), ct).ConfigureAwait(false);
     }
 
@@ -286,8 +286,7 @@ public static class ConfigFileManager
         var node = ConfigSecretsHelper.ParseJsonObject(json) ?? new JsonObject();
         node["ConnectionStrings"] = secretConn.DeepClone();
 
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        await File.WriteAllTextAsync(appsettingsPath, node.ToJsonString(options), ct).ConfigureAwait(false);
+        await File.WriteAllTextAsync(appsettingsPath, ConfigSecretsHelper.WriteJsonObject(node), ct).ConfigureAwait(false);
     }
 
     /// <summary>

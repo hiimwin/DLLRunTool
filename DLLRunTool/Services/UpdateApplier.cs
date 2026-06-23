@@ -7,7 +7,18 @@ namespace DLLRunTool.Services;
 
 public static class UpdateApplier
 {
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(15) };
+    private static readonly HttpClient Http = CreateHttpClient();
+
+    private static HttpClient CreateHttpClient()
+    {
+        var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = true })
+        {
+            Timeout = TimeSpan.FromMinutes(15)
+        };
+        client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "DLLRunTool-Updater");
+        client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/octet-stream, application/zip, */*");
+        return client;
+    }
 
     private static readonly string[] PreserveFileNames =
     [
