@@ -1,6 +1,6 @@
 {
-  "version": "1.2.8",
-  "releasedAt": "2026-06-23",
-  "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.8/Win_Trung-MicroservicesControlPanel.zip",
-  "releaseNotes": "Fix export/import giu ConnectionStrings va PublicKey; merge ConnectionStrings tung key; auto-update download; cap nhat README"
+  "version": "1.2.9",
+  "releasedAt": "2026-06-24",
+  "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.9/Win_Trung-MicroservicesControlPanel.zip",
+  "releaseNotes": "Run env config (ASPNETCORE_ENVIRONMENT default Development); clean bin/obj per service and optional before build"
 }

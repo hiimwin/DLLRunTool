@@ -125,11 +125,29 @@
               <h3 data-i18n="workspace.missingTitle">Service không tìm thấy thư mục</h3>
               <ul id="workspaceMissingList"></ul>
             </div>
+            <div class="form-section workspace-run-section">
+              <h3 class="form-section-title" data-i18n="workspace.runTitle">Tùy chọn chạy service</h3>
+              <p class="section-desc" data-i18n="workspace.runDesc">Biến môi trường áp dụng mỗi lần RUN (dotnet dll). Mặc định: ASPNETCORE_ENVIRONMENT=Development.</p>
+              <div class="env-editor">
+                <div class="env-table-header">
+                  <span data-i18n="label.key">Key</span>
+                  <span data-i18n="label.value">Value</span>
+                  <span></span>
+                </div>
+                <div id="runEnvContainer"></div>
+              </div>
+              <button class="btn ghost small" id="runAddEnv" data-i18n="global.addEnv">+ Thêm biến</button>
+              <label class="run-option-toggle">
+                <input type="checkbox" id="chkCleanBinBeforeBuild" />
+                <span data-i18n="workspace.cleanBinBeforeBuild">Xóa bin/obj trước mỗi lần Build</span>
+              </label>
+            </div>
             <div class="action-bar panel-card-footer">
               <button class="btn primary" id="btnSaveWorkspace">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
                 <span data-i18n="workspace.save">Lưu workspace paths</span>
               </button>
+              <button class="btn secondary" id="btnSaveRunSettings" data-i18n="workspace.saveRun">Lưu tùy chọn chạy</button>
             </div>
           </div>
         </section>

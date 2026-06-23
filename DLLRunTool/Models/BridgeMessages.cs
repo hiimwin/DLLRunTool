@@ -63,6 +63,12 @@ public class BridgeRequest
 
     [JsonPropertyName("logFilterServiceId")]
     public string? LogFilterServiceId { get; set; }
+
+    [JsonPropertyName("serviceEnvironmentVariables")]
+    public Dictionary<string, string>? ServiceEnvironmentVariables { get; set; }
+
+    [JsonPropertyName("cleanBinBeforeBuild")]
+    public bool? CleanBinBeforeBuild { get; set; }
 }
 
 public class ServiceUiConfig

@@ -14,6 +14,8 @@ $zip = Join-Path $root "publish\Win_Trung-MicroservicesControlPanel.zip"
 $repo = "hiimwin/DLLRunTool"
 
 function Resolve-Gh {
+    $installed = "$env:ProgramFiles\GitHub CLI\gh.exe"
+    if (Test-Path $installed) { return $installed }
     $cmd = Get-Command gh -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
     $portable = Join-Path $env:TEMP "gh-cli\bin\gh.exe"

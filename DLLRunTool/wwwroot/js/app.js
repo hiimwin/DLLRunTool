@@ -51,6 +51,10 @@
     workspaceMissing: $("workspaceMissing"),
     workspaceMissingList: $("workspaceMissingList"),
     btnSaveWorkspace: $("btnSaveWorkspace"),
+    btnSaveRunSettings: $("btnSaveRunSettings"),
+    runEnvContainer: $("runEnvContainer"),
+    runAddEnv: $("runAddEnv"),
+    chkCleanBinBeforeBuild: $("chkCleanBinBeforeBuild"),
     backupPlatformName: $("backupPlatformName"),
     backupBeCount: $("backupBeCount"),
     backupFeCount: $("backupFeCount"),
@@ -430,6 +434,11 @@
             <button class="row-btn icon-only" data-action="openCmd" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.openCmd"))}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
             </button>
+            ${!svc.isExe && svc.type !== "FE"
+              ? `<button class="row-btn icon-only${isServiceBusy(svc) ? " is-busy" : ""}" data-action="cleanBin" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(t("btn.cleanBinTitle"))}"${isServiceBusy(svc) || svc.isRunning ? " disabled" : ""}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>`
+              : ""}
             <button class="row-btn icon-only lock-btn${svc.isLocked ? " locked" : ""}" data-action="lock" data-id="${escapeAttr(svc.id)}" title="${escapeAttr(svc.isLocked ? t("lock.locked") : t("lock.unlocked"))}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 ${svc.isLocked
@@ -508,7 +517,7 @@
   async function handleRowAction(action, serviceId) {
     const svc = findServiceInState(serviceId);
     if (action !== "stop" && action !== "lock" && action !== "logs" && action !== "settings"
-        && action !== "openProject" && action !== "openCmd" && action !== "openBin" && isServiceBusy(svc)) {
+        && action !== "openProject" && action !== "openCmd" && action !== "openBin" && action !== "cleanBin" && isServiceBusy(svc)) {
       return;
     }
 
@@ -539,6 +548,19 @@
       }
       case "stop": Bridge.send("stop", payload); break;
       case "build": Bridge.send("build", payload); break;
+      case "cleanBin":
+        showAppDialog({
+          title: t("confirm.cleanBinTitle"),
+          message: t("confirm.cleanBinMsg", { name: svc.name }),
+          buttons: [
+            { id: "cancel", label: t("confirm.cancel") },
+            { id: "no", label: t("confirm.no") },
+            { id: "yes", label: t("confirm.yes"), primary: true, danger: true }
+          ]
+        }).then((ok) => {
+          if (ok === "yes") Bridge.send("cleanBin", payload);
+        });
+        break;
       case "restart":
         setLocalServiceFlags(serviceId, { isStarting: true });
         setRunProgress({ serviceId, active: true, label: t("run.restarting") });
@@ -628,8 +650,17 @@
     }
   }
 
-  function sendRunSettingsPatch(patch) {
-    Bridge.send("saveRunSettings", patch);
+  function collectRunSettingsPatch(extra = {}, includeRunEnv = false) {
+    const patch = { ...extra };
+    if (includeRunEnv) {
+      patch.serviceEnvironmentVariables = collectEnvFrom(els.runEnvContainer);
+      patch.cleanBinBeforeBuild = !!els.chkCleanBinBeforeBuild?.checked;
+    }
+    return patch;
+  }
+
+  function sendRunSettingsPatch(patch = {}, includeRunEnv = false) {
+    Bridge.send("saveRunSettings", collectRunSettingsPatch(patch, includeRunEnv));
   }
 
   function applyRunSettings(payload) {
@@ -639,6 +670,14 @@
     }
     if (els.chkShowConsoleSelected) {
       els.chkShowConsoleSelected.checked = !!payload.showConsoleSelected;
+    }
+    if (els.chkCleanBinBeforeBuild) {
+      els.chkCleanBinBeforeBuild.checked = !!payload.cleanBinBeforeBuild;
+    }
+    if (els.runEnvContainer && payload.serviceEnvironmentVariables) {
+      renderEnvContainer(els.runEnvContainer, payload.serviceEnvironmentVariables);
+    } else if (els.runEnvContainer && els.runEnvContainer.childElementCount === 0) {
+      renderEnvContainer(els.runEnvContainer, { ASPNETCORE_ENVIRONMENT: "Development" });
     }
     if (payload.consoleSelectedServiceId && !state.logFilterServiceId) {
       setLogFilterValue(payload.consoleSelectedServiceId, findServiceName(payload.consoleSelectedServiceId), true);
@@ -881,7 +920,10 @@
     els.backupView.classList.toggle("hidden", view !== "backup");
     if (view === "global") loadGlobalConfig();
     if (view === "backup") loadBackupPreview();
-    if (view === "workspace") loadWorkspacePaths();
+    if (view === "workspace") {
+      loadWorkspacePaths();
+      Bridge.send("loadRunSettings");
+    }
     updateRailChrome();
     updateNavContext();
     if (!silent) persistUiState();
@@ -1466,6 +1508,11 @@
   }
   els.globalAddEnv.onclick = () => addEnvRow(els.globalEnvContainer, "", "");
   els.modalAddEnv.onclick = () => addEnvRow(els.modalEnvContainer, "", "");
+  els.runAddEnv?.addEventListener("click", () => addEnvRow(els.runEnvContainer, "", ""));
+
+  els.btnSaveRunSettings?.addEventListener("click", () => {
+    sendRunSettingsPatch({}, true);
+  });
   els.modalClose.onclick = closeModal;
   els.settingsModal.onclick = (e) => { if (e.target === els.settingsModal) closeModal(); };
 

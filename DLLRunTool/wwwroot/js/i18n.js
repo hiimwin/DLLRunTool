@@ -40,7 +40,11 @@
         configFile: "File cấu hình: {path}",
         pathPlaceholder: "Chọn hoặc dán đường dẫn...",
         browse: "Browse...",
-        openPaths: "Cấu hình đường dẫn"
+        openPaths: "Cấu hình đường dẫn",
+        runTitle: "Tùy chọn chạy service",
+        runDesc: "Biến môi trường áp dụng mỗi lần RUN (dotnet dll). Không liên quan appsettings hay ABP license login.",
+        saveRun: "Lưu tùy chọn chạy",
+        cleanBinBeforeBuild: "Xóa bin/obj trước mỗi lần Build"
       },
       global: {
         title: "Cấu hình chung",
@@ -137,7 +141,8 @@
       btn: {
         run: "Run", stop: "Stop", build: "Build", restart: "Restart", log: "Log",
         settings: "Cấu hình", starting: "Starting", startingTitle: "Đang khởi động...",
-        openProject: "Mở thư mục project", openCmd: "CMD tại project"
+        openProject: "Mở thư mục project", openCmd: "CMD tại project",
+        cleanBin: "Xóa bin/obj", cleanBinTitle: "Xóa toàn bộ thư mục bin và obj của project"
       },
       lock: {
         locked: "Đã khóa — không bị Stop All / thoát tool dừng",
@@ -166,6 +171,8 @@
         stopAll: "Dừng tất cả service đang chạy?",
         stopAllTitle: "Dừng tất cả",
         stopAllLocked: "{count} service đã khóa sẽ không bị dừng: {names}",
+        cleanBinTitle: "Xóa bin/obj",
+        cleanBinMsg: "Xóa toàn bộ thư mục bin và obj của {name}?\n\nCần Build lại trước khi Run.",
         yes: "Đồng ý",
         no: "Không",
         cancel: "Hủy"
@@ -211,7 +218,11 @@
         configFile: "Config file: {path}",
         pathPlaceholder: "Pick or paste a path...",
         browse: "Browse...",
-        openPaths: "Configure paths"
+        openPaths: "Configure paths",
+        runTitle: "Service run options",
+        runDesc: "Environment variables applied on every RUN (dotnet dll). Not appsettings or ABP license login.",
+        saveRun: "Save run options",
+        cleanBinBeforeBuild: "Delete bin/obj before each Build"
       },
       global: {
         title: "Global configuration",
@@ -308,7 +319,8 @@
       btn: {
         run: "Run", stop: "Stop", build: "Build", restart: "Restart", log: "Log",
         settings: "Settings", starting: "Starting", startingTitle: "Starting...",
-        openProject: "Open project folder", openCmd: "CMD at project"
+        openProject: "Open project folder", openCmd: "CMD at project",
+        cleanBin: "Clean bin/obj", cleanBinTitle: "Delete entire bin and obj folders for this project"
       },
       lock: {
         locked: "Locked — not stopped by Stop All / exit",
@@ -337,6 +349,8 @@
         stopAll: "Stop all running services?",
         stopAllTitle: "Stop all",
         stopAllLocked: "{count} locked service(s) will not be stopped: {names}",
+        cleanBinTitle: "Clean bin/obj",
+        cleanBinMsg: "Delete all bin and obj folders for {name}?\n\nYou must Build again before Run.",
         yes: "Confirm",
         no: "No",
         cancel: "Cancel"

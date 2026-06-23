@@ -102,6 +102,7 @@ public sealed class AsyncCommandRunner
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
+        RunSettingsStore.ApplyToProcess(psi);
 
         Process process;
         try
@@ -468,4 +469,5 @@ public sealed class AsyncCommandRunner
             // Some GUI processes don't support redirect
         }
     }
+
 }

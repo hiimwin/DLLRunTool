@@ -1264,6 +1264,26 @@ textarea {
   accent-color: var(--accent);
 }
 
+.workspace-run-section {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.run-option-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.run-option-toggle input {
+  accent-color: var(--accent);
+}
+
 .log-svc {
   color: var(--accent);
   font-weight: 600;

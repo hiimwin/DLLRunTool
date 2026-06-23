@@ -163,6 +163,9 @@ public sealed class ServiceOrchestrator
                 case "build":
                     await BuildServiceAsync(request.ServiceId!, request.PlatformId).ConfigureAwait(false);
                     break;
+                case "cleanBin":
+                    await CleanBinServiceAsync(request.ServiceId!, request.PlatformId).ConfigureAwait(false);
+                    break;
                 case "refreshStatus":
                     RefreshAllStatuses();
                     break;
@@ -255,13 +258,7 @@ public sealed class ServiceOrchestrator
                 appTitle = AppTitle,
                 appVersion = AppVersionInfo.Current,
                 workspace = BuildWorkspacePayload(),
-                runSettings = new
-                {
-                    showConsoleWindow = RunSettingsStore.ShowConsoleWindow,
-                    showConsoleSelected = RunSettingsStore.ShowConsoleSelected,
-                    consoleSelectedServiceId = RunSettingsStore.ConsoleSelectedServiceId,
-                    stopGracefulTimeoutMs = RunSettingsStore.StopGracefulTimeoutMs
-                },
+                runSettings = RunSettingsStore.ToPayload(),
                 uiState = UiStateStore.Current,
                 stackPresets = StackPresetsStore.Load().Select(p => new { p.Id, p.Name, count = p.ServiceIds.Count }),
                 configSecretFindings = ConfigSecretScanner.ScanServices(GetActiveServices())
@@ -806,6 +803,34 @@ public sealed class ServiceOrchestrator
 
         try
         {
+            if (RunSettingsStore.CleanBinBeforeBuild && !service.IsFrontEnd)
+            {
+                try
+                {
+                    var removed = RunSettingsStore.CleanProjectOutputFolders(service);
+                    PushLog(new LogPayload
+                    {
+                        ServiceId = service.Id,
+                        ServiceName = service.Name,
+                        Level = "info",
+                        Message = removed > 0
+                            ? $"{service.Name}: đã xóa bin/obj trước build."
+                            : $"{service.Name}: không có bin/obj để xóa trước build."
+                    });
+                }
+                catch (Exception ex)
+                {
+                    PushLog(new LogPayload
+                    {
+                        ServiceId = service.Id,
+                        ServiceName = service.Name,
+                        Level = "error",
+                        Message = $"{service.Name}: xóa bin/obj thất bại — {ex.Message}"
+                    });
+                    return;
+                }
+            }
+
             var exitCode = await _commandRunner.RunBuildAsync(service).ConfigureAwait(false);
 
             if (exitCode == 0)
@@ -819,6 +844,81 @@ public sealed class ServiceOrchestrator
                 ServiceId = service.Id,
                 Level = exitCode == 0 ? "success" : "error",
                 Message = exitCode == 0 ? $"Build {service.Name} thành công." : $"Build {service.Name} thất bại (exit {exitCode})."
+            });
+        }
+        finally
+        {
+            ReleaseServiceOperation(service.Id);
+            PushServicesList();
+        }
+    }
+
+    private async Task CleanBinServiceAsync(string serviceId, string? platformId = null)
+    {
+        var service = FindService(serviceId, platformId);
+        if (service == null)
+            return;
+
+        if (service.IsExe || service.IsFrontEnd)
+        {
+            PushLog(new LogPayload
+            {
+                ServiceId = service.Id,
+                ServiceName = service.Name,
+                Level = "warning",
+                Message = $"{service.Name} không hỗ trợ xóa bin/obj."
+            });
+            return;
+        }
+
+        if (service.IsRunning)
+        {
+            PushLog(new LogPayload
+            {
+                ServiceId = service.Id,
+                ServiceName = service.Name,
+                Level = "warning",
+                Message = $"{service.Name} đang chạy — dừng service trước khi xóa bin/obj."
+            });
+            return;
+        }
+
+        if (!TryAcquireServiceOperation(service.Id, "clean"))
+        {
+            PushLog(new LogPayload
+            {
+                ServiceId = service.Id,
+                ServiceName = service.Name,
+                Level = "warning",
+                Message = $"{service.Name} đang bận — vui lòng đợi."
+            });
+            return;
+        }
+
+        try
+        {
+            await Task.Run(() =>
+            {
+                var removed = RunSettingsStore.CleanProjectOutputFolders(service);
+                PushLog(new LogPayload
+                {
+                    ServiceId = service.Id,
+                    ServiceName = service.Name,
+                    Level = removed > 0 ? "success" : "info",
+                    Message = removed > 0
+                        ? $"{service.Name}: đã xóa bin/obj ({service.ResolveSourceProjectPath()})."
+                        : $"{service.Name}: không có thư mục bin/obj để xóa."
+                });
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            PushLog(new LogPayload
+            {
+                ServiceId = service.Id,
+                ServiceName = service.Name,
+                Level = "error",
+                Message = $"{service.Name}: xóa bin/obj thất bại — {ex.Message}"
             });
         }
         finally
@@ -985,12 +1085,7 @@ public sealed class ServiceOrchestrator
         _pushToUi(new BridgeResponse
         {
             Type = "runSettings",
-            Payload = new
-            {
-                showConsoleWindow = RunSettingsStore.ShowConsoleWindow,
-                showConsoleSelected = RunSettingsStore.ShowConsoleSelected,
-                consoleSelectedServiceId = RunSettingsStore.ConsoleSelectedServiceId
-            }
+            Payload = RunSettingsStore.ToPayload()
         });
     }
 
@@ -1009,6 +1104,13 @@ public sealed class ServiceOrchestrator
             selectedId = null;
 
         RunSettingsStore.Set(showAll, showSelected, selectedId);
+
+        if (request.ServiceEnvironmentVariables != null)
+            RunSettingsStore.SetServiceEnvironmentVariables(request.ServiceEnvironmentVariables);
+
+        if (request.CleanBinBeforeBuild.HasValue)
+            RunSettingsStore.SetCleanBinBeforeBuild(request.CleanBinBeforeBuild.Value);
+
         _commandRunner.ShowConsoleWindow = showAll;
 
         ApplyConsoleMirrors(showAll, showSelected, selectedId);
