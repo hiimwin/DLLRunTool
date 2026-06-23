@@ -1,4 +1,4 @@
-# Stage + rewrite single commit with win.trungle.dev@gmail.com (no Cursor co-author)
+# Stage + rewrite single commit with win.trungle.dev@gmail.com
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
 

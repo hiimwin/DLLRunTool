@@ -6,6 +6,9 @@ publish/
 .vs/
 *.WebView2/
 paths.local.json
+appsettings.secrets.json
+ui-state.json
+*.pdb
 *.Backup.tmp
 
 # Runtime data — co the chua DB password / backup day du
