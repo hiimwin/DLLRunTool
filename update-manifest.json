@@ -1,6 +1,6 @@
 {
-  "version": "1.2.10",
+  "version": "1.2.11",
   "releasedAt": "2026-06-24",
   "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.10/Win_Trung-MicroservicesControlPanel.zip",
-  "releaseNotes": "Run env config; BE chay tu project folder; clean bin/obj; UI restart+clean; cap nhat README"
+  "releaseNotes": "README: bo link git cong khai; giu logic chay BE tu project folder"
 }

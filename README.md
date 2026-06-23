@@ -14,7 +14,7 @@ Công cụ Windows (WinForms + WebView2) để chạy, build, cấu hình và qu
 
 ## Cài đặt nhanh (bản exe)
 
-1. Tải `Win_Trung-MicroservicesControlPanel.zip` từ kênh phát hành nội bộ (Releases / SharePoint / …).
+1. Tải `Win_Trung-MicroservicesControlPanel.zip` từ kênh phát hành nội bộ (SharePoint / file server / …).
 2. Giải nén và chạy `DLLRunTool.exe`.
 3. Tab **Workspace** → chỉnh `loyaltyRoot`, `fptcxRoot`, `redisPath` → **Lưu**.
    - Hoặc copy `paths.local.example.json` thành `paths.local.json` và sửa đường dẫn **trên máy bạn**.
@@ -37,14 +37,14 @@ Hoặc từng bước:
 
 ```powershell
 .\publish.ps1 -Version "1.2.10" `
-  -DownloadUrl "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.10/Win_Trung-MicroservicesControlPanel.zip" `
+  -DownloadUrl "https://<server-cap-nhat>/Win_Trung-MicroservicesControlPanel.zip" `
   -ReleaseNotes "Mo ta thay doi"
 .\create-release.ps1 -Version "1.2.10"
 ```
 
-`release-full.ps1`: build zip → kiểm tra file nhạy cảm → loại `Co-authored-by` Cursor khỏi commit → push → tạo GitHub Release. Chạy trong PowerShell ngoài Cursor nếu commit bị gắn trailer Cursor.
+`release-full.ps1`: build zip → kiểm tra file nhạy cảm → loại `Co-authored-by` Cursor khỏi commit → push → tạo Release. Chạy trong PowerShell ngoài Cursor nếu commit bị gắn trailer Cursor.
 
-Sau `publish.ps1`: commit + push `update-manifest.json` lên `main`; upload zip lên Releases (tag trùng version).
+Sau `publish.ps1`: commit + push `update-manifest.json`; upload zip lên kênh phát hành (tag trùng version).
 
 | Output | Mô tả |
 |--------|--------|
@@ -81,18 +81,18 @@ Script `scripts\sign-publish.ps1` tự gọi sau `dotnet publish` nếu có `MCC
 Tool so sánh version local với `update-manifest.json` trên server cập nhật khi mở app.
 
 1. Dev: sửa `update-check.config.json` → `manifestUrl` trỏ tới file JSON public (HTTPS).
-2. Mỗi release: `publish.ps1` cập nhật manifest; push manifest; đăng zip lên Releases.
+2. Mỗi release: `publish.ps1` cập nhật manifest; đăng zip lên kênh phát hành.
 
 ```json
 {
   "version": "1.2.10",
   "releasedAt": "2026-06-23",
-  "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.10/Win_Trung-MicroservicesControlPanel.zip",
+  "downloadUrl": "https://<server-cap-nhat>/Win_Trung-MicroservicesControlPanel.zip",
   "releaseNotes": "Mo ta ngan ve ban moi"
 }
 ```
 
-Manifest mẫu: [update-manifest.json](update-manifest.json) trên repo [hiimwin/DLLRunTool](https://github.com/hiimwin/DLLRunTool).
+Manifest mẫu: `update-manifest.json` (file JSON trên server cập nhật — không nằm trong zip phát hành).
 
 Người dùng bản cũ thấy banner **Có bản cập nhật mới** → **Cập nhật ngay** tải zip, giữ `paths.local.json`, global config, backups.
 
@@ -245,7 +245,7 @@ DLLRunTool/
 ├── publish.ps1
 ├── release.bat           # Chạy release-full.ps1 (PowerShell ngoài Cursor)
 ├── scripts/
-│   ├── release-full.ps1  # Build + push + GitHub Release
+│   ├── release-full.ps1  # Build + push + Release
 │   └── rewrite-unpushed-clean.ps1
 ├── update-manifest.json  # Push lên server cap nhat (khong nam trong zip)
 ├── README.md
