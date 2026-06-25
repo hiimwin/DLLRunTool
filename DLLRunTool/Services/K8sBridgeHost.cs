@@ -20,6 +20,7 @@ public sealed class K8sBridgeHost : IAsyncDisposable
     private K8sTerminalSessions? _terminalSessions;
     private bool _pageReady;
     private bool _disposed;
+    private int _connectGeneration;
 
     public K8sBridgeHost(WebView2 webView) => _webView = webView;
 
@@ -87,6 +88,7 @@ public sealed class K8sBridgeHost : IAsyncDisposable
 
         _pageReady = true;
         await SendClusterCatalogAsync().ConfigureAwait(false);
+        await TryAutoConnectLastSessionAsync().ConfigureAwait(false);
     }
 
     private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
@@ -113,9 +115,13 @@ public sealed class K8sBridgeHost : IAsyncDisposable
                     PostMessage("theme", new { theme = UiStateStore.Current.Theme });
                     if (_k8s.IsConnected)
                         await NotifyConnectedStateAsync().ConfigureAwait(false);
+                    else
+                        await TryAutoConnectLastSessionAsync().ConfigureAwait(false);
                     break;
                 case "listclusters":
                     await SendClusterCatalogAsync().ConfigureAwait(false);
+                    if (!_k8s.IsConnected)
+                        await TryAutoConnectLastSessionAsync().ConfigureAwait(false);
                     break;
                 case "openterminal":
                 case "createterminal":
@@ -137,7 +143,10 @@ public sealed class K8sBridgeHost : IAsyncDisposable
                     await ConnectClusterAsync(request).ConfigureAwait(false);
                     break;
                 case "disconnectcluster":
-                    await DisconnectClusterAsync().ConfigureAwait(false);
+                    await DisconnectClusterAsync(keepSession: true).ConfigureAwait(false);
+                    break;
+                case "logoutcluster":
+                    await LogoutClusterAsync().ConfigureAwait(false);
                     break;
                 case "savenamespaces":
                     await SaveNamespacesAsync(request).ConfigureAwait(false);
@@ -188,11 +197,127 @@ public sealed class K8sBridgeHost : IAsyncDisposable
                 case "removefromkubeconfig":
                     await RemoveFromKubeconfigAsync(request).ConfigureAwait(false);
                     break;
+                case "startportforward":
+                    StartPortForward(request);
+                    break;
+                case "stopportforward":
+                    StopPortForward(request);
+                    break;
+                case "removeportforward":
+                    RemovePortForward(request);
+                    break;
+                case "getportforwarddefaults":
+                    GetPortForwardDefaults(request);
+                    break;
+                case "getservicedetail":
+                    await PushServiceDetailAsync(request.Name ?? request.PodName, request.Namespace).ConfigureAwait(false);
+                    break;
+                case "getserviceyaml":
+                    await PushServiceYamlAsync(request.Name ?? request.PodName, request.Namespace).ConfigureAwait(false);
+                    break;
+                case "deleteservice":
+                    await DeleteServiceAndRefreshAsync(request.Name ?? request.PodName, request.Namespace).ConfigureAwait(false);
+                    break;
             }
         }
         catch (Exception ex)
         {
             PostMessage("error", new { message = ex.Message });
+        }
+    }
+
+    public async Task TryAutoConnectIfNeededAsync()
+    {
+        if (!_pageReady || _k8s.IsConnected)
+            return;
+
+        await TryAutoConnectLastSessionAsync().ConfigureAwait(false);
+    }
+
+    private async Task TryAutoConnectLastSessionAsync()
+    {
+        if (_k8s.IsConnected)
+            return;
+
+        var session = K8sClusterStore.GetLastSession();
+        if (session == null || !session.Remember)
+            return;
+
+        var clusterId = K8sClusterStore.ResolveClusterIdForSession(session);
+        if (string.IsNullOrWhiteSpace(clusterId))
+            return;
+
+        var (ok, message) = await _k8s.ConnectToClusterAsync(
+            clusterId,
+            session.KubeConfigPath,
+            session.Context).ConfigureAwait(false);
+
+        if (!ok)
+        {
+            PostMessage("info", new
+            {
+                message = $"Chưa kết nối được cluster đã lưu ({session.Context ?? clusterId}).\n{message}\n\nBấm «Đăng nhập cloud» nếu cần az login, rồi Quét lại."
+            });
+            return;
+        }
+
+        K8sClusterStore.SaveLastSession(clusterId, _k8s.ConnectedContext, _k8s.ConnectedKubeConfigPath);
+        var gen = ++_connectGeneration;
+        PostConnectedFast(clusterId, autoReconnect: true);
+        _ = BackgroundLoadClusterDataAsync(clusterId, gen);
+    }
+
+    private void PostConnectedFast(string? clusterId, bool autoReconnect = false)
+    {
+        PostMessage("connected", new
+        {
+            loading = true,
+            message = $"Đã kết nối: {_k8s.ConnectedClusterName}",
+            autoReconnect,
+            clusterName = _k8s.ConnectedClusterName,
+            clusterId,
+            context = _k8s.ConnectedContext,
+            kubeConfigPath = _k8s.ConnectedKubeConfigPath,
+            namespaces = K8sClusterStore.ResolveNamespaces(clusterId, _k8s.ConnectedContext),
+            theme = UiStateStore.Current.Theme,
+            color = K8sClusterStore.GetClusterColor(clusterId, _k8s.ConnectedContext)
+        });
+    }
+
+    private async Task BackgroundLoadClusterDataAsync(string? clusterId, int generation)
+    {
+        try
+        {
+            await _k8s.ApplyPermissionsAsync().ConfigureAwait(false);
+            if (generation != _connectGeneration)
+                return;
+
+            var namespaceList = await _k8s.GetNamespacesAsync().ConfigureAwait(false);
+            if (generation != _connectGeneration)
+                return;
+
+            PostMessage("clusterData", new
+            {
+                clusterId,
+                limitedRbac = _k8s.LimitedRbac,
+                noWorkloadAccess = _k8s.NoWorkloadAccess,
+                namespaces = K8sClusterStore.ResolveNamespaces(clusterId, _k8s.ConnectedContext),
+                permissionInfo = _k8s.LastInfo,
+                namespaceList
+            });
+
+            await PushPodsAsync().ConfigureAwait(false);
+            if (generation != _connectGeneration)
+                return;
+
+            await PushPortForwardsAsync().ConfigureAwait(false);
+            PostMessage("loadingDone", new { clusterId });
+            PostInfoIfAny();
+        }
+        catch (Exception ex)
+        {
+            if (generation == _connectGeneration)
+                PostMessage("error", new { message = $"Tải dữ liệu cluster: {ex.Message}" });
         }
     }
 
@@ -220,22 +345,9 @@ public sealed class K8sBridgeHost : IAsyncDisposable
             return;
 
         var clusterId = _k8s.ConnectedClusterId;
-        PostMessage("connected", new
-        {
-            message = $"Đã kết nối: {_k8s.ConnectedClusterName}",
-            clusterName = _k8s.ConnectedClusterName,
-            clusterId,
-            context = _k8s.ConnectedContext,
-            kubeConfigPath = _k8s.ConnectedKubeConfigPath,
-            limitedRbac = _k8s.LimitedRbac,
-            noWorkloadAccess = _k8s.NoWorkloadAccess,
-            namespaces = K8sClusterStore.ResolveNamespaces(clusterId, _k8s.ConnectedContext),
-            permissionInfo = _k8s.LastInfo,
-            namespaceList = await _k8s.GetNamespacesAsync().ConfigureAwait(false),
-            theme = UiStateStore.Current.Theme,
-            color = K8sClusterStore.GetClusterColor(clusterId, _k8s.ConnectedContext)
-        });
-        await PushPodsAsync().ConfigureAwait(false);
+        var gen = ++_connectGeneration;
+        PostConnectedFast(clusterId);
+        await BackgroundLoadClusterDataAsync(clusterId, gen).ConfigureAwait(false);
     }
 
     private K8sTerminalSessions TerminalSessions =>
@@ -250,7 +362,9 @@ public sealed class K8sBridgeHost : IAsyncDisposable
             var sessionId = TerminalSessions.CreateSession();
             var hint = _k8s.IsConnected
                 ? $"PowerShell — cluster {_k8s.ConnectedClusterName} · context {_k8s.ConnectedContext}"
-                : "PowerShell — gõ lệnh đăng nhập (vd: az login, az aks get-credentials …). Xong bấm Quét lại.";
+                : K8sClusterStore.GetLastSession()?.Remember == true
+                    ? "PowerShell — phiên cluster đã lưu; tool sẽ tự kết nối. Chỉ cần az login khi token hết hạn."
+                    : "PowerShell — az login / az aks get-credentials … (lần đầu hoặc sau Đăng xuất).";
 
             var cwd = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             PostMessage("terminalStarted", new { sessionId, message = hint, cwd });
@@ -342,37 +456,37 @@ public sealed class K8sBridgeHost : IAsyncDisposable
 
     private async Task ConnectClusterAsync(K8sWebRequest request)
     {
-        if (_k8s.IsConnected)
-            await _k8s.DisconnectAsync().ConfigureAwait(false);
-
-        var (ok, message) = await _k8s.ConnectToClusterAsync(
-            request.ClusterId,
-            request.KubeConfigPath,
-            request.Context).ConfigureAwait(false);
-
-        if (!ok)
+        try
         {
-            PostMessage("error", new { message });
-            return;
+            if (_k8s.IsConnected)
+                await _k8s.DisconnectAsync().ConfigureAwait(false);
+
+            var (ok, message) = await _k8s.ConnectToClusterAsync(
+                request.ClusterId,
+                request.KubeConfigPath,
+                request.Context).ConfigureAwait(false);
+
+            if (!ok)
+            {
+                PostMessage("connectFailed", new { message });
+                return;
+            }
+
+            K8sClusterStore.SaveLastSession(
+                request.ClusterId ?? _k8s.ConnectedClusterId ?? "",
+                _k8s.ConnectedContext,
+                _k8s.ConnectedKubeConfigPath);
+
+            var clusterId = request.ClusterId ?? _k8s.ConnectedClusterId;
+            var gen = ++_connectGeneration;
+            PostConnectedFast(clusterId);
+            _ = BackgroundLoadClusterDataAsync(clusterId, gen);
         }
-
-        PostMessage("connected", new
+        catch (Exception ex)
         {
-            message,
-            clusterName = _k8s.ConnectedClusterName,
-            clusterId = request.ClusterId ?? _k8s.ConnectedClusterId,
-            context = _k8s.ConnectedContext,
-            kubeConfigPath = _k8s.ConnectedKubeConfigPath,
-            limitedRbac = _k8s.LimitedRbac,
-            noWorkloadAccess = _k8s.NoWorkloadAccess,
-            namespaces = K8sClusterStore.ResolveNamespaces(request.ClusterId, _k8s.ConnectedContext),
-            permissionInfo = _k8s.LastInfo,
-            namespaceList = await _k8s.GetNamespacesAsync().ConfigureAwait(false),
-            theme = UiStateStore.Current.Theme,
-            color = K8sClusterStore.GetClusterColor(request.ClusterId, _k8s.ConnectedContext)
-        });
-        await PushPodsAsync().ConfigureAwait(false);
-        PostInfoIfAny();
+            await _k8s.DisconnectAsync().ConfigureAwait(false);
+            PostMessage("connectFailed", new { message = $"Kết nối cluster thất bại: {ex.Message}" });
+        }
     }
 
     private async Task SaveNamespacesAsync(K8sWebRequest request)
@@ -435,10 +549,18 @@ public sealed class K8sBridgeHost : IAsyncDisposable
         PostMessage("toast", new { message = ok ? message : "Đã xử lý yêu cầu xóa cluster." });
     }
 
-    private async Task DisconnectClusterAsync()
+    private async Task DisconnectClusterAsync(bool keepSession = false)
     {
         await _k8s.DisconnectAsync().ConfigureAwait(false);
-        PostMessage("disconnected", new { message = "Đã ngắt kết nối cluster." });
+        PostMessage("disconnected", new { message = "Đã ngắt kết nối cluster.", keepSession });
+        await SendClusterCatalogAsync().ConfigureAwait(false);
+    }
+
+    private async Task LogoutClusterAsync()
+    {
+        K8sClusterStore.ClearLastSession();
+        await _k8s.DisconnectAsync().ConfigureAwait(false);
+        PostMessage("disconnected", new { message = "Đã đăng xuất cluster. Chạy az logout / az login trong terminal khi cần đổi tài khoản." });
         await SendClusterCatalogAsync().ConfigureAwait(false);
     }
 
@@ -523,9 +645,11 @@ public sealed class K8sBridgeHost : IAsyncDisposable
                 break;
             case "applications":
             case "helm":
-            case "portforwarding":
-                PostMessage("info", new { message = "Tính năng đang phát triển — sẽ bổ sung Helm / Port Forwarding sau." });
+                PostMessage("info", new { message = "Tính năng đang phát triển — sẽ bổ sung Helm / Applications sau." });
                 PostMessage(view ?? "applications", Array.Empty<K8sListItemDto>());
+                break;
+            case "portforwarding":
+                await PushPortForwardsAsync().ConfigureAwait(false);
                 break;
             default:
                 await PushPodsAsync().ConfigureAwait(false);
@@ -651,6 +775,232 @@ public sealed class K8sBridgeHost : IAsyncDisposable
             message = _k8s.LastInfo,
             showNamespaceBar = _k8s.LimitedRbac
         });
+    }
+
+    private void GetPortForwardDefaults(K8sWebRequest request)
+    {
+        var name = request.Name ?? request.PodName;
+        var ns = request.Namespace;
+        var port = request.Port ?? 0;
+        var kind = request.ResourceKind ?? "svc";
+        var context = _k8s.ConnectedContext;
+
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(ns) || port <= 0)
+        {
+            PostMessage("portForwardDefaults", new { localPort = port, useHttps = false, openInBrowser = false });
+            return;
+        }
+
+        var configId = K8sPortForwardStore.BuildConfigId(ns, kind, name, port);
+        var saved = K8sPortForwardStore.Find(context, configId);
+        PostMessage("portForwardDefaults", new
+        {
+            localPort = saved?.LocalPort ?? port,
+            useHttps = saved?.UseHttps ?? false,
+            openInBrowser = saved?.OpenInBrowser ?? false,
+            configId
+        });
+    }
+
+    private void StartPortForward(K8sWebRequest request)
+    {
+        if (!_k8s.IsConnected)
+        {
+            PostMessage("error", new { message = "Chưa kết nối cluster." });
+            return;
+        }
+
+        var name = request.Name ?? request.PodName;
+        var ns = request.Namespace;
+        var port = request.Port ?? 0;
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(ns) || port <= 0)
+        {
+            PostMessage("error", new { message = "Thiếu tên resource, namespace hoặc port." });
+            return;
+        }
+
+        var localPort = request.LocalPort ?? port;
+        var useHttps = request.UseHttps;
+        var openInBrowser = request.OpenInBrowser;
+        var kind = request.ResourceKind ?? "svc";
+        var context = _k8s.ConnectedContext ?? "";
+
+        try
+        {
+            K8sPortForwardStore.Save(context, ns, kind, name, port, localPort, useHttps, openInBrowser);
+
+            if (request.SaveOnly)
+            {
+                PostMessage("toast", new { message = "Đã lưu cấu hình port-forward." });
+                _ = PushPortForwardsAsync();
+                return;
+            }
+
+            var session = K8sPortForwardManager.Start(
+                ns,
+                kind,
+                name,
+                port,
+                localPort,
+                context,
+                _k8s.ConnectedKubeConfigPath,
+                useHttps,
+                openInBrowser);
+
+            PostMessage("portForwardStarted", new
+            {
+                message = $"Port-forward: {session.Url} → {ns}/{name}:{session.RemotePort}",
+                url = session.Url,
+                openInBrowser = session.OpenInBrowser
+            });
+            _ = PushPortForwardsAsync();
+            if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(ns))
+                _ = RefreshServiceDetailIfOpenAsync(name, ns);
+        }
+        catch (Exception ex)
+        {
+            PostMessage("error", new { message = ex.Message });
+        }
+    }
+
+    private void StopPortForward(K8sWebRequest request)
+    {
+        var id = request.PortForwardId ?? request.ConfigId;
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            PostMessage("error", new { message = "Thiếu id port-forward." });
+            return;
+        }
+
+        if (id.Contains('@'))
+            K8sPortForwardManager.Stop(id);
+        else
+            K8sPortForwardManager.StopByConfigId(id);
+
+        PostMessage("toast", new { message = "Đã dừng port-forward." });
+        _ = PushPortForwardsAsync();
+    }
+
+    private async Task PushServiceDetailAsync(string? name, string? ns)
+    {
+        if (!_k8s.IsConnected)
+        {
+            PostMessage("error", new { message = "Chưa kết nối cluster." });
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(ns))
+        {
+            PostMessage("error", new { message = "Thiếu tên service hoặc namespace." });
+            return;
+        }
+
+        try
+        {
+            var detail = await _k8s.GetServiceDetailAsync(name, ns).ConfigureAwait(false);
+            ApplyPortForwardStatusToServiceDetail(detail);
+            PostMessage("serviceDetail", detail);
+        }
+        catch (Exception ex)
+        {
+            PostMessage("error", new { message = $"Không tải được service: {ex.Message}" });
+        }
+    }
+
+    private Task RefreshServiceDetailIfOpenAsync(string name, string ns) =>
+        PushServiceDetailAsync(name, ns);
+
+    private void ApplyPortForwardStatusToServiceDetail(K8sServiceDetailDto detail)
+    {
+        var forwards = K8sPortForwardManager.GetMergedList(_k8s.ConnectedContext)
+            .Where(f => string.Equals(f.Namespace, detail.Namespace, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(f.ResourceName, detail.Name, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(f.ResourceKind, "svc", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var port in detail.Ports)
+        {
+            var match = forwards.FirstOrDefault(f => f.RemotePort == port.Port);
+            if (match == null)
+                continue;
+
+            port.Forwarding = match.Running;
+            port.PortForwardId = match.Id;
+            port.ConfigId = match.ConfigId;
+            port.LocalPort = match.LocalPort;
+            port.UseHttps = match.UseHttps;
+            port.OpenInBrowser = match.OpenInBrowser;
+        }
+    }
+
+    private async Task PushServiceYamlAsync(string? name, string? ns)
+    {
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(ns))
+        {
+            PostMessage("error", new { message = "Thiếu tên service hoặc namespace." });
+            return;
+        }
+
+        try
+        {
+            var yaml = await _k8s.GetServiceYamlAsync(name, ns).ConfigureAwait(false);
+            PostMessage("serviceYaml", new { name, ns, text = yaml });
+        }
+        catch (Exception ex)
+        {
+            PostMessage("error", new { message = $"YAML: {ex.Message}" });
+        }
+    }
+
+    private async Task DeleteServiceAndRefreshAsync(string? name, string? ns)
+    {
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(ns))
+        {
+            PostMessage("error", new { message = "Thiếu tên service hoặc namespace." });
+            return;
+        }
+
+        try
+        {
+            await _k8s.DeleteServiceAsync(name, ns).ConfigureAwait(false);
+            PostMessage("toast", new { message = $"Đã xóa service {ns}/{name}" });
+            PostMessage("serviceDetailClosed", new { });
+            await PushListAsync("services", () => _k8s.GetServicesAsync()).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            PostMessage("error", new { message = ex.Message });
+        }
+    }
+
+    private void RemovePortForward(K8sWebRequest request)
+    {
+        var configId = request.ConfigId ?? request.PortForwardId;
+        if (string.IsNullOrWhiteSpace(configId))
+        {
+            PostMessage("error", new { message = "Thiếu id port-forward." });
+            return;
+        }
+
+        if (configId.Contains('@'))
+        {
+            K8sPortForwardManager.Stop(configId);
+            var at = configId.IndexOf('@');
+            configId = configId[..at];
+        }
+        else
+            K8sPortForwardManager.StopByConfigId(configId);
+
+        K8sPortForwardStore.Remove(_k8s.ConnectedContext, configId);
+        PostMessage("toast", new { message = "Đã xóa port-forward." });
+        _ = PushPortForwardsAsync();
+    }
+
+    private Task PushPortForwardsAsync()
+    {
+        var items = K8sPortForwardManager.GetMergedList(_k8s.ConnectedContext);
+        PostMessage("portforwarding", items);
+        return Task.CompletedTask;
     }
 
     private async Task PushLogsAsync(string? name, string? ns)

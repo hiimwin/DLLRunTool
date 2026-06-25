@@ -19,7 +19,11 @@ Tool chạy / dừng / build microservices local (Back-End + Front-End).
 ## Kubernetes
 
 - Tab **Kubernetes** (icon vàng trên rail trái): quản lý cluster từ kubeconfig máy bạn.
-- Chọn cluster bên trái → xem Pods, Deployments, …
+- Chọn cluster bên trái → xem Pods, Deployments, Services, …
+- **Mang sang máy khác**: copy cả thư mục zip (self-contained). Trên máy mới: `az login` → `az aks get-credentials …` → **Quét lại** → kết nối. Namespace team nằm trong `k8s.clusters.json` (đi kèm tool).
+- **Phiên giống Lens**: sau khi kết nối cluster lần đầu, tool **tự kết nối lại** khi mở lại (dùng kubeconfig + Azure CLI đã login). Chỉ mất khi bấm **Đăng xuất**.
+- **Port forward**: Network → **Services** → bấm nút port (vd. `10389`) → mở `http://localhost:…`. Xem/dừng tại **Port Forwarding**.
+- Cần **kubectl** trên PATH (thường có sau Azure CLI / kubelogin).
 - **Đăng nhập cloud**: terminal PowerShell trong tool (nhiều tab, kéo resize).
 - Sau `az login` / `get-credentials` → bấm **Quét lại**.
 - Chuyển sang tab Dịch vụ vẫn giữ kết nối cluster.

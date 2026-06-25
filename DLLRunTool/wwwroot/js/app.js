@@ -22,7 +22,8 @@
     updateInfo: null,
     lastBackupPreview: null,
     lastGlobalConfig: null,
-    configSecretFindings: []
+    configSecretFindings: [],
+    k8sEngineActive: false
   };
 
   const MAX_LOG_HISTORY = 2000;
@@ -40,6 +41,10 @@
     handbookBody: $("handbookBody"),
     k8sView: $("k8sView"),
     k8sHost: $("k8sHost"),
+    k8sIdle: $("k8sIdle"),
+    k8sToolbar: $("k8sToolbar"),
+    btnK8sPowerOn: $("btnK8sPowerOn"),
+    btnK8sPowerOff: $("btnK8sPowerOff"),
     workspaceView: $("workspaceView"),
     globalView: $("globalView"),
     backupView: $("backupView"),
@@ -170,6 +175,7 @@
   }
 
   function openK8sPanel() {
+    if (!state.k8sEngineActive) return;
     ensureK8sEmbedObserver();
     requestAnimationFrame(() => {
       const b = getK8sEmbedBounds();
@@ -179,6 +185,31 @@
         Bridge.send("syncK8sTheme", { theme: state.theme });
       });
     });
+  }
+
+  function updateK8sPanelChrome() {
+    const active = state.k8sEngineActive;
+    els.k8sIdle?.classList.toggle("hidden", active);
+    els.k8sToolbar?.classList.toggle("hidden", !active);
+    els.k8sHost?.classList.toggle("hidden", !active);
+    els.railKubernetes?.classList.toggle("k8s-engine-on", active);
+  }
+
+  function enableK8sEngine() {
+    if (state.k8sEngineActive) return;
+    state.k8sEngineActive = true;
+    updateK8sPanelChrome();
+    if (state.railSection === "kubernetes") {
+      openK8sPanel();
+    }
+  }
+
+  function disableK8sEngine() {
+    if (!state.k8sEngineActive) return;
+    if (!confirm(t("k8s.powerOffConfirm"))) return;
+    state.k8sEngineActive = false;
+    Bridge.send("closeK8sEmbed");
+    updateK8sPanelChrome();
   }
 
   function persistUiState() {
@@ -291,6 +322,7 @@
     if (state.view === "backup" && state.lastBackupPreview) renderBackupPreview(state.lastBackupPreview);
     if (state.view === "global" && state.lastGlobalConfig) renderGlobalConfig(state.lastGlobalConfig);
     if (state.view === "handbook") renderHandbook();
+    updateK8sPanelChrome();
     if (state.workspace) renderWorkspaceBanner(state.workspace);
     updateLogServiceFilter();
     updateConsoleSelectedToggle();
@@ -991,8 +1023,11 @@
       state.view = "kubernetes";
       hideWorkspacePanels();
       els.k8sView?.classList.remove("hidden");
+      updateK8sPanelChrome();
       updateRailChrome();
-      openK8sPanel();
+      if (state.k8sEngineActive) {
+        openK8sPanel();
+      }
       updateNavContext();
       if (!silent) persistUiState();
       return;
@@ -1498,6 +1533,12 @@
   }
   if (els.railKubernetes) {
     els.railKubernetes.onclick = () => switchRail("kubernetes");
+  }
+  if (els.btnK8sPowerOn) {
+    els.btnK8sPowerOn.onclick = () => enableK8sEngine();
+  }
+  if (els.btnK8sPowerOff) {
+    els.btnK8sPowerOff.onclick = () => disableK8sEngine();
   }
 
   els.themeToggle.onclick = () => {

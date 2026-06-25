@@ -22,3 +22,7 @@ service-locks.json
 run-settings.json
 backup-*.json
 service-logs/
+
+# Dev test harness (local paths / kubeconfig — khong commit)
+scripts/K8sConnectTest/
+scripts/test-k8s-connect.csx

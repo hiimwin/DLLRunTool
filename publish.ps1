@@ -146,7 +146,7 @@ if ([string]::IsNullOrWhiteSpace($DownloadUrl) -and $existingManifest.downloadUr
 if ([string]::IsNullOrWhiteSpace($DownloadUrl)) {
     $DownloadUrl = $defaultDownloadUrl
 } elseif ($DownloadUrl -notmatch [regex]::Escape("/v$Version/")) {
-    Write-Host "==> downloadUrl khong khop version v$Version — cap nhat ve URL mac dinh" -ForegroundColor Yellow
+    Write-Host "==> downloadUrl khong khop version v$Version - cap nhat ve URL mac dinh" -ForegroundColor Yellow
     $DownloadUrl = $defaultDownloadUrl
 }
 if ([string]::IsNullOrWhiteSpace($ReleaseNotes) -and $existingManifest.releaseNotes) {
@@ -174,5 +174,5 @@ $exe = Join-Path $outDir "DLLRunTool.exe"
 Write-Host ""
 Write-Host "Done." -ForegroundColor Green
 Write-Host "  EXE : $exe"
-Write-Host "  ZIP : $zipPath ($zipSize MB)"
+Write-Host ('  ZIP : {0} ({1} MB)' -f $zipPath, $zipSize)
 Write-Host "  Ver : $Version"

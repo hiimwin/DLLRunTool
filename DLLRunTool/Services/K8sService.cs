@@ -99,27 +99,8 @@ public sealed class K8sService : IAsyncDisposable
                 .ResolveNamespaces(clusterId, _activeContext)
                 .ToList();
 
-            var permissions = await K8sPermissionChecker.EvaluateAsync(
-                _client,
-                resolvedPath,
-                _activeContext ?? resolvedContext,
-                _configuredNamespaces,
-                ct).ConfigureAwait(false);
-
-            if (permissions.NoWorkloadAccess)
-            {
-                _limitedRbac = true;
-                _noWorkloadAccess = true;
-                LastInfo = permissions.Message;
-            }
-            else if (!permissions.CanListPodsClusterWide)
-            {
-                _limitedRbac = true;
-                LastInfo = permissions.Message;
-            }
-
             ConnectedClusterName = displayName;
-            ConnectedContext = resolvedContext ?? "";
+            ConnectedContext = _activeContext ?? resolvedContext ?? "";
             ConnectedClusterId = clusterId;
             if (!string.IsNullOrWhiteSpace(clusterId))
                 K8sClusterStore.SetLastConnected(clusterId);
@@ -147,6 +128,40 @@ public sealed class K8sService : IAsyncDisposable
         {
             await DisconnectAsync().ConfigureAwait(false);
             return (false, $"Kết nối K8s thất bại: {FormatK8sError(ex)}");
+        }
+    }
+
+    public async Task ApplyPermissionsAsync(CancellationToken ct = default)
+    {
+        if (_client == null)
+            return;
+
+        _limitedRbac = false;
+        _noWorkloadAccess = false;
+        LastInfo = null;
+
+        var permissions = await K8sPermissionChecker.EvaluateAsync(
+            _client,
+            _kubeConfigPath,
+            _activeContext,
+            _configuredNamespaces,
+            ct).ConfigureAwait(false);
+
+        if (permissions.NoWorkloadAccess)
+        {
+            _limitedRbac = true;
+            _noWorkloadAccess = true;
+            LastInfo = permissions.Message;
+        }
+        else if (!permissions.CanListPodsClusterWide)
+        {
+            _limitedRbac = true;
+            LastInfo = permissions.Message;
+            if (permissions.AccessibleNamespaces.Count > 0)
+            {
+                _configuredNamespaces = permissions.AccessibleNamespaces.ToList();
+                PersistDiscoveredNamespaces(_activeContext, permissions.AccessibleNamespaces);
+            }
         }
     }
 
@@ -214,6 +229,14 @@ public sealed class K8sService : IAsyncDisposable
             .Select(n => n.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static void PersistDiscoveredNamespaces(string? context, IReadOnlyList<string> namespaces)
+    {
+        if (string.IsNullOrWhiteSpace(context) || namespaces.Count == 0)
+            return;
+
+        K8sClusterStore.SaveNamespacesForContext(context, namespaces);
     }
 
     public async Task<IReadOnlyList<K8sPodDto>> GetPodsAsync(CancellationToken ct = default)
@@ -377,6 +400,154 @@ public sealed class K8sService : IAsyncDisposable
         var client = RequireClient();
         var pod = await client.CoreV1.ReadNamespacedPodAsync(name, ns, cancellationToken: ct).ConfigureAwait(false);
         return KubernetesYaml.Serialize(pod);
+    }
+
+    public async Task<string> GetServiceYamlAsync(string name, string ns, CancellationToken ct = default)
+    {
+        var client = RequireClient();
+        var svc = await client.CoreV1.ReadNamespacedServiceAsync(name, ns, cancellationToken: ct).ConfigureAwait(false);
+        return KubernetesYaml.Serialize(svc);
+    }
+
+    public async Task DeleteServiceAsync(string name, string ns, CancellationToken ct = default)
+    {
+        var client = RequireClient();
+        await client.CoreV1.DeleteNamespacedServiceAsync(name, ns, cancellationToken: ct).ConfigureAwait(false);
+    }
+
+    public async Task<K8sServiceDetailDto> GetServiceDetailAsync(string name, string ns, CancellationToken ct = default)
+    {
+        var client = RequireClient();
+        var svc = await client.CoreV1.ReadNamespacedServiceAsync(name, ns, cancellationToken: ct).ConfigureAwait(false);
+        var meta = svc.Metadata;
+        var spec = svc.Spec;
+        var created = meta?.CreationTimestamp;
+
+        var detail = new K8sServiceDetailDto
+        {
+            Name = meta?.Name ?? name,
+            Namespace = meta?.NamespaceProperty ?? ns,
+            Created = FormatCreatedRelative(created),
+            CreatedAt = FormatCreatedAbsolute(created),
+            Labels = meta?.Labels?.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase) ?? new(StringComparer.OrdinalIgnoreCase),
+            Annotations = meta?.Annotations?.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase) ?? new(StringComparer.OrdinalIgnoreCase),
+            Selector = spec?.Selector?.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase) ?? new(StringComparer.OrdinalIgnoreCase),
+            Type = spec?.Type ?? "ClusterIP",
+            SessionAffinity = spec?.SessionAffinity ?? "None",
+            ClusterIP = spec?.ClusterIP ?? "",
+            ClusterIPs = spec?.ClusterIPs?.ToList() ?? (string.IsNullOrWhiteSpace(spec?.ClusterIP) ? [] : [spec.ClusterIP]),
+            IpFamilies = spec?.IpFamilies != null ? string.Join(", ", spec.IpFamilies) : "",
+            IpFamilyPolicy = spec?.IpFamilyPolicy ?? "",
+            Ports = (spec?.Ports ?? []).Select(p => new K8sServicePortDetailDto
+            {
+                Name = p.Name ?? "",
+                Port = p.Port,
+                TargetPort = p.TargetPort?.ToString() ?? "",
+                Protocol = p.Protocol ?? "TCP",
+                NodePort = p.NodePort > 0 ? p.NodePort : null
+            }).ToList()
+        };
+
+        try
+        {
+            var ep = await client.CoreV1.ReadNamespacedEndpointsAsync(name, ns, cancellationToken: ct).ConfigureAwait(false);
+            detail.Endpoints = BuildEndpointRows(ep);
+        }
+        catch
+        {
+            detail.Endpoints = [];
+        }
+
+        try
+        {
+            var slices = await client.DiscoveryV1.ListNamespacedEndpointSliceAsync(
+                ns,
+                labelSelector: $"kubernetes.io/service-name={name}",
+                cancellationToken: ct).ConfigureAwait(false);
+
+            detail.EndpointSlices = slices.Items.Select(slice =>
+            {
+                var addrs = new List<string>();
+                foreach (var endpoint in slice.Endpoints ?? [])
+                {
+                    foreach (var addr in endpoint.Addresses ?? [])
+                    {
+                        foreach (var port in slice.Ports ?? [])
+                            addrs.Add($"{addr}:{port.Port}");
+                    }
+                }
+
+                return new K8sEndpointSliceRowDto
+                {
+                    Name = slice.Metadata?.Name ?? "",
+                    Endpoints = addrs.Count > 0 ? string.Join(", ", addrs.Distinct()) : "—"
+                };
+            }).ToList();
+        }
+        catch
+        {
+            detail.EndpointSlices = [];
+        }
+
+        try
+        {
+            var events = await client.CoreV1.ListNamespacedEventAsync(
+                ns,
+                fieldSelector: $"involvedObject.name={name},involvedObject.kind=Service",
+                cancellationToken: ct).ConfigureAwait(false);
+
+            detail.Events = events.Items
+                .OrderByDescending(e => e.LastTimestamp ?? e.EventTime ?? e.Metadata?.CreationTimestamp)
+                .Take(50)
+                .Select(e => new K8sServiceEventDto
+                {
+                    Type = e.Type ?? "Normal",
+                    Reason = e.Reason ?? "",
+                    Message = e.Message ?? "",
+                    Age = FormatAge(e.LastTimestamp ?? e.EventTime ?? e.Metadata?.CreationTimestamp)
+                })
+                .ToList();
+        }
+        catch
+        {
+            detail.Events = [];
+        }
+
+        return detail;
+    }
+
+    private static List<K8sEndpointRowDto> BuildEndpointRows(V1Endpoints ep)
+    {
+        var rows = new List<K8sEndpointRowDto>();
+        var subsets = ep.Subsets ?? [];
+        if (subsets.Count == 0)
+            return rows;
+
+        var allTargets = new List<string>();
+        foreach (var subset in subsets)
+        {
+            var ips = subset.Addresses?.Select(a => a.Ip).Where(ip => !string.IsNullOrWhiteSpace(ip)).ToList() ?? [];
+            var ports = subset.Ports?.ToList() ?? [];
+            if (ports.Count == 0)
+            {
+                foreach (var ip in ips)
+                    allTargets.Add(ip!);
+                continue;
+            }
+
+            foreach (var ip in ips)
+            {
+                foreach (var port in ports)
+                    allTargets.Add($"{ip}:{port.Port}");
+            }
+        }
+
+        rows.Add(new K8sEndpointRowDto
+        {
+            Name = ep.Metadata?.Name ?? "",
+            Endpoints = allTargets.Count > 0 ? string.Join(", ", allTargets.Distinct()) : "—"
+        });
+        return rows;
     }
 
     public async Task ApplyPodYamlAsync(string yaml, CancellationToken ct = default)
@@ -693,6 +864,8 @@ public sealed class K8sService : IAsyncDisposable
 
     public async Task DisconnectAsync()
     {
+        K8sPortForwardManager.StopAll();
+
         if (_client != null)
         {
             _client.Dispose();
@@ -839,14 +1012,31 @@ public sealed class K8sService : IAsyncDisposable
         Detail = $"{s.Data?.Count ?? 0} keys"
     };
 
-    private static K8sListItemDto MapService(V1Service s) => new()
+    private static K8sListItemDto MapService(V1Service s)
     {
-        Name = s.Metadata?.Name ?? "",
-        Namespace = s.Metadata?.NamespaceProperty ?? "",
-        Status = s.Spec?.Type ?? "ClusterIP",
-        Age = FormatAge(s.Metadata?.CreationTimestamp),
-        Detail = s.Spec?.ClusterIP ?? ""
-    };
+        var ports = s.Spec?.Ports?
+            .Select(p => new K8sPortDto
+            {
+                Name = p.Name ?? "",
+                Port = p.Port,
+                Protocol = p.Protocol ?? "TCP"
+            })
+            .ToList();
+
+        var portText = ports is { Count: > 0 }
+            ? string.Join(", ", ports.Select(p => $"{p.Port}/{p.Protocol}"))
+            : "";
+
+        return new K8sListItemDto
+        {
+            Name = s.Metadata?.Name ?? "",
+            Namespace = s.Metadata?.NamespaceProperty ?? "",
+            Status = s.Spec?.Type ?? "ClusterIP",
+            Age = FormatAge(s.Metadata?.CreationTimestamp),
+            Detail = string.IsNullOrWhiteSpace(portText) ? s.Spec?.ClusterIP ?? "" : portText,
+            Ports = ports
+        };
+    }
 
     private static K8sListItemDto MapIngress(V1Ingress i) => new()
     {
@@ -955,5 +1145,34 @@ public sealed class K8sService : IAsyncDisposable
         if (span.TotalMinutes >= 1)
             return $"{(int)span.TotalMinutes}m";
         return $"{Math.Max(0, (int)span.TotalSeconds)}s";
+    }
+
+    private static string FormatCreatedRelative(DateTime? created)
+    {
+        if (created == null)
+            return "—";
+
+        var span = DateTime.UtcNow - created.Value.ToUniversalTime();
+        if (span.TotalDays >= 1)
+            return $"{(int)span.TotalDays}d {(int)span.TotalHours % 24}h {(int)span.TotalMinutes % 60}m";
+        if (span.TotalHours >= 1)
+            return $"{(int)span.TotalHours}h {(int)span.TotalMinutes % 60}m";
+        if (span.TotalMinutes >= 1)
+            return $"{(int)span.TotalMinutes}m";
+        return $"{Math.Max(0, (int)span.TotalSeconds)}s";
+    }
+
+    private static string FormatCreatedAbsolute(DateTime? created)
+    {
+        if (created == null)
+            return "—";
+
+        var local = created.Value.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(created.Value, DateTimeKind.Utc).ToLocalTime()
+            : created.Value.ToLocalTime();
+        var offset = TimeZoneInfo.Local.GetUtcOffset(local);
+        var sign = offset >= TimeSpan.Zero ? "+" : "-";
+        var abs = offset.Duration();
+        return $"{local:MMM dd, yyyy, h:mm:ss tt} GMT{sign}{abs.Hours:D2}:{abs.Minutes:D2}";
     }
 }

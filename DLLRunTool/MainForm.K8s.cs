@@ -69,7 +69,7 @@ public partial class MainForm
     /// <summary>Ẩn embed khi đổi tab — giữ WebView + kết nối cluster chạy nền.</summary>
     public void SuspendK8sEmbed() => HideK8sEmbed();
 
-    /// <summary>Thu hồi hoàn toàn WebView + bridge (đóng app).</summary>
+    /// <summary>Thu hồi hoàn toàn WebView + bridge (tắt K8s hoặc đóng app).</summary>
     public async void CloseK8sEmbed()
     {
         if (!_k8sUiInitialized)
@@ -77,6 +77,37 @@ public partial class MainForm
 
         _panelK8s.Visible = false;
         await DisconnectK8sAsync().ConfigureAwait(true);
+        TeardownK8sWebView();
+    }
+
+    private void TeardownK8sWebView()
+    {
+        if (!_k8sUiInitialized)
+            return;
+
+        try
+        {
+            _webViewK8s.Dispose();
+        }
+        catch
+        {
+            // ignore cleanup errors
+        }
+
+        try
+        {
+            _panelK8s.Controls.Clear();
+            Controls.Remove(_panelK8s);
+            _panelK8s.Dispose();
+        }
+        catch
+        {
+            // ignore cleanup errors
+        }
+
+        _k8sUiInitialized = false;
+        _panelK8s = null!;
+        _webViewK8s = null!;
     }
 
     private async Task EnsureK8sDashboardAsync()
@@ -84,6 +115,7 @@ public partial class MainForm
         if (_k8sBridge != null)
         {
             SyncK8sTheme(UiStateStore.Current.Theme);
+            await _k8sBridge.TryAutoConnectIfNeededAsync().ConfigureAwait(true);
             return;
         }
 
@@ -133,17 +165,6 @@ public partial class MainForm
     private async Task CleanupK8sOnFormClosingAsync()
     {
         await DisconnectK8sAsync().ConfigureAwait(false);
-
-        if (_webViewK8s != null)
-        {
-            try
-            {
-                _webViewK8s.Dispose();
-            }
-            catch
-            {
-                // ignore
-            }
-        }
+        TeardownK8sWebView();
     }
 }

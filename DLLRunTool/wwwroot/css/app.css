@@ -114,6 +114,7 @@ body {
 }
 
 .rail-icon {
+  position: relative;
   width: 40px;
   height: 40px;
   border-radius: 10px;
@@ -1935,10 +1936,91 @@ body.k8s-active .console-section {
 }
 
 .k8s-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   padding: 0;
   background: transparent;
   border: none;
   box-shadow: none;
+  min-height: 0;
+  flex: 1;
+}
+
+.k8s-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+}
+
+.k8s-toolbar-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.k8s-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3ecf8e;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #3ecf8e 25%, transparent);
+  flex-shrink: 0;
+}
+
+.k8s-idle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 360px;
+  border-radius: var(--radius);
+  background: var(--bg-app);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.k8s-idle-inner {
+  max-width: 420px;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.k8s-idle-icon {
+  opacity: 0.85;
+  margin-bottom: 16px;
+}
+
+.k8s-idle-inner h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.k8s-idle-desc {
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.rail-icon.k8s-engine-on::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3ecf8e;
+  border: 2px solid var(--bg-rail);
 }
 
 .k8s-panel .k8s-host {

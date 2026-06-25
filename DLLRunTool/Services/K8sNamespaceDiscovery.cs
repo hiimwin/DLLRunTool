@@ -32,12 +32,12 @@ internal static class K8sNamespaceDiscovery
 
         var hints = CollectNamespaceHints(kubeConfigPath, contextName, configuredNamespaces);
         var accessible = new List<string>();
+        var tasks = hints.Select(async ns =>
+            await CanAccessNamespaceAsync(client, ns, ct).ConfigureAwait(false) ? ns : null).ToArray();
+        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
-        foreach (var ns in hints)
-        {
-            if (await CanListPodsInNamespaceAsync(client, ns, ct).ConfigureAwait(false))
-                accessible.Add(ns);
-        }
+        foreach (var ns in results.Where(n => n != null).Cast<string>())
+            accessible.Add(ns);
 
         return accessible.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(n => n).ToList();
     }
@@ -59,6 +59,17 @@ internal static class K8sNamespaceDiscovery
         }
 
         hints.Add("default");
+
+        foreach (var ns in K8sClusterStore.GetLensNamespaceHints())
+            hints.Add(ns);
+
+        if (!string.IsNullOrWhiteSpace(contextName))
+        {
+            foreach (var ns in K8sClusterStore.GetNamespacesForContextFromCatalog(contextName))
+                hints.Add(ns);
+            foreach (var ns in CollectAksNamespaceHeuristics(contextName))
+                hints.Add(ns);
+        }
 
         if (!File.Exists(kubeConfigPath))
             return hints.ToList();
@@ -98,9 +109,38 @@ internal static class K8sNamespaceDiscovery
         return hints.ToList();
     }
 
-    private static async Task<bool> CanListPodsInNamespaceAsync(
+    /// <summary>Gợi ý namespace AKS/Loyalty — không cần Lens trên máy mới.</summary>
+    private static IEnumerable<string> CollectAksNamespaceHeuristics(string contextName)
+    {
+        var lower = contextName.ToLowerInvariant();
+        if (lower.Contains("qa", StringComparison.Ordinal))
+            yield return "msg-qa";
+        if (lower.Contains("uat", StringComparison.Ordinal))
+            yield return "vbb-uat";
+        if (lower.Contains("dev", StringComparison.Ordinal))
+            yield return "msg-dev";
+        if (lower.Contains("prod", StringComparison.Ordinal))
+            yield return "msg-prod";
+    }
+
+    private static async Task<bool> CanAccessNamespaceAsync(
         IKubernetes client,
         string ns,
+        CancellationToken ct)
+    {
+        foreach (var resource in new[] { "pods", "services", "deployments" })
+        {
+            if (await CanIListInNamespaceAsync(client, ns, resource, ct).ConfigureAwait(false))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static async Task<bool> CanIListInNamespaceAsync(
+        IKubernetes client,
+        string ns,
+        string resource,
         CancellationToken ct)
     {
         try
@@ -112,7 +152,7 @@ internal static class K8sNamespaceDiscovery
                     ResourceAttributes = new V1ResourceAttributes
                     {
                         Verb = "list",
-                        Resource = "pods",
+                        Resource = resource,
                         NamespaceProperty = ns
                     }
                 }
@@ -127,13 +167,23 @@ internal static class K8sNamespaceDiscovery
         }
         catch
         {
-            // fallback: thử list thật
+            // fallback below
         }
 
         try
         {
-            await client.CoreV1.ListNamespacedPodAsync(ns, limit: 1, cancellationToken: ct).ConfigureAwait(false);
-            return true;
+            switch (resource)
+            {
+                case "pods":
+                    await client.CoreV1.ListNamespacedPodAsync(ns, limit: 1, cancellationToken: ct).ConfigureAwait(false);
+                    return true;
+                case "services":
+                    await client.CoreV1.ListNamespacedServiceAsync(ns, limit: 1, cancellationToken: ct).ConfigureAwait(false);
+                    return true;
+                case "deployments":
+                    await client.AppsV1.ListNamespacedDeploymentAsync(ns, limit: 1, cancellationToken: ct).ConfigureAwait(false);
+                    return true;
+            }
         }
         catch (k8s.Autorest.HttpOperationException ex) when (ex.Response?.StatusCode == System.Net.HttpStatusCode.Forbidden)
         {
@@ -143,5 +193,7 @@ internal static class K8sNamespaceDiscovery
         {
             return false;
         }
+
+        return false;
     }
 }

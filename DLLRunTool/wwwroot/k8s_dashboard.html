@@ -96,6 +96,7 @@
 
         <div class="k8s-nav-footer">
           <button type="button" id="btnRefresh" class="k8s-btn primary sm block hidden" data-when-connected><i class="fa-solid fa-rotate"></i> Refresh</button>
+          <button type="button" id="btnLogoutCluster" class="k8s-btn sm block hidden" data-when-connected><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
           <button type="button" id="btnOpenTerminal" class="k8s-btn sm block" data-when-disconnected><i class="fa-solid fa-terminal"></i> Đăng nhập cloud</button>
         </div>
       </aside>
@@ -120,24 +121,47 @@
           <input id="podSearch" type="search" placeholder="Search…" />
           <span id="statusLine" class="count">0 items</span>
         </header>
-        <div class="k8s-content">
-          <div id="nsBar" class="k8s-banner warn hidden">
-            <p style="margin-bottom:8px;font-size:0.75rem;">Tùy chọn namespace (phân cách dấu phẩy) nếu RBAC hạn chế:</p>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <input id="nsInput" type="text" placeholder="vd: demo-k8s, default" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-app);color:var(--text-primary);font-size:0.78rem;" />
-              <button type="button" id="btnSaveNs" class="k8s-btn sm primary">Áp dụng</button>
-            </div>
-          </div>
+        <div class="k8s-work-area">
+        <div id="mainContent" class="k8s-content">
           <div id="infoBanner" class="k8s-banner hidden"></div>
           <div id="errorBanner" class="k8s-banner err hidden"></div>
           <div id="overviewPanel" class="hidden"></div>
           <div id="tablePanel" class="k8s-table-wrap">
+            <div id="loadingOverlay" class="k8s-loading-overlay hidden">
+              <i class="fa-solid fa-spinner fa-spin"></i>
+              <span>Đang tải dữ liệu cluster…</span>
+            </div>
             <table class="k8s-table">
               <thead id="tableHead"></thead>
               <tbody id="tableBody"></tbody>
             </table>
           </div>
           <p id="emptyState" class="k8s-empty hidden">Item list is empty</p>
+        </div>
+        <aside id="serviceDetailPanel" class="k8s-detail-panel hidden" aria-label="Service detail">
+          <header class="k8s-detail-head">
+            <h2 id="serviceDetailTitle">Service</h2>
+            <div class="k8s-detail-actions">
+              <button type="button" id="btnServiceYaml" class="k8s-icon-btn" title="YAML"><i class="fa-solid fa-pen"></i></button>
+              <button type="button" id="btnServiceDelete" class="k8s-icon-btn del" title="Delete"><i class="fa-solid fa-trash"></i></button>
+              <button type="button" id="btnServiceDetailClose" class="k8s-icon-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+          </header>
+          <div id="serviceDetailBody" class="k8s-detail-body"></div>
+        </aside>
+        <aside id="pfDetailPanel" class="k8s-detail-panel hidden" aria-label="Port forward detail">
+          <header class="k8s-detail-head">
+            <h2 id="pfDetailTitle">Port Forward</h2>
+            <div class="k8s-detail-actions">
+              <button type="button" id="btnPfEdit" class="k8s-icon-btn" title="Edit / Modify"><i class="fa-solid fa-pen"></i></button>
+              <button type="button" id="btnPfPlay" class="k8s-icon-btn" title="Start"><i class="fa-solid fa-play"></i></button>
+              <button type="button" id="btnPfStop" class="k8s-icon-btn hidden" title="Stop"><i class="fa-solid fa-stop"></i></button>
+              <button type="button" id="btnPfDelete" class="k8s-icon-btn del" title="Remove"><i class="fa-solid fa-trash"></i></button>
+              <button type="button" id="btnPfDetailClose" class="k8s-icon-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+          </header>
+          <div id="pfDetailBody" class="k8s-detail-body"></div>
+        </aside>
         </div>
         </div>
       </main>
@@ -161,7 +185,8 @@
   </div>
 
   <div id="clusterCtxMenu" class="k8s-ctx-menu hidden" role="menu">
-    <button type="button" data-act="disconnect">Disconnect</button>
+    <button type="button" data-act="disconnect">Ngắt kết nối</button>
+    <button type="button" data-act="logout">Đăng xuất cluster</button>
     <button type="button" data-act="settings">Show Cluster Settings</button>
     <button type="button" data-act="remove">Remove from kubeconfig</button>
     <button type="button" data-act="hotbar">Add to hotbar</button>
@@ -221,6 +246,35 @@
       <textarea id="modalContent" class="terminal" readonly></textarea>
     </div>
   </div>
+
+  <div id="pfModal" class="k8s-modal pf-modal-overlay hidden">
+    <div class="k8s-modal-card pf-modal-card">
+      <div class="k8s-modal-head pf-modal-head">
+        <h2>Port Forwarding for <span id="pfModalResource" class="pf-modal-resource"></span></h2>
+        <button type="button" id="pfModalClose" class="k8s-btn sm ghost" title="Close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="pf-modal-body">
+        <div class="pf-field-group">
+          <label class="pf-field-label" for="pfLocalPort">Local port to forward from:</label>
+          <input type="number" id="pfLocalPort" class="pf-port-input" min="1" max="65535" inputmode="numeric" />
+        </div>
+        <div class="pf-options">
+          <label class="pf-check" for="pfHttps">
+            <input type="checkbox" id="pfHttps" />
+            <span>https</span>
+          </label>
+          <label class="pf-check" for="pfOpenBrowser">
+            <input type="checkbox" id="pfOpenBrowser" />
+            <span>Open in Browser</span>
+          </label>
+        </div>
+      </div>
+      <div class="pf-modal-foot">
+        <button type="button" id="pfCancel" class="k8s-btn pf-btn-cancel">Cancel</button>
+        <button type="button" id="pfStart" class="k8s-btn primary pf-btn-start">Start</button>
+      </div>
+    </div>
+  </div>
   <div id="toast" class="k8s-toast hidden"></div>
 
   <script>
@@ -242,7 +296,7 @@
       "configmaps","secrets","services","ingresses","persistentvolumeclaims",
       "persistentvolumes","storageclasses","namespaces","events","serviceaccounts",
       "roles","rolebindings","clusterroles","clusterrolebindings","customresources",
-      "applications","helm","portforwarding"
+      "applications","helm"
     ]);
 
     const NAMESPACED_VIEWS = new Set([
@@ -252,12 +306,15 @@
     ]);
 
     const state = {
-      connected: false, view: "pods", rows: [], allRows: [],
+      connected: false, loading: false, view: "pods", rows: [], allRows: [],
       clusters: [], selectedCluster: null, activeContext: "", activeClusterId: "",
       activeClusterName: "", clusterColor: "yellow",
       namespaceList: [], accessibleNamespaces: [], nsFilter: "", search: "", yamlEditable: false,
       terminalOpen: false, sidebarMode: "pick",
-      terminal: { tabs: [], activeId: null, search: "" }
+      terminal: { tabs: [], activeId: null, search: "" },
+      pfPending: null,
+      serviceDetail: null,
+      pfDetail: null
     };
 
     function applyTheme(theme) {
@@ -293,11 +350,13 @@
       }
       const q = (state.search || "").trim().toLowerCase();
       if (q) {
-        list = list.filter((r) =>
-          (r.name || "").toLowerCase().includes(q) ||
-          (r.namespace || "").toLowerCase().includes(q) ||
-          (r.detail || "").toLowerCase().includes(q)
-        );
+        list = list.filter((r) => {
+          const hay = [
+            r.name, r.namespace, r.detail, r.status, r.resourceName, r.resourceKind,
+            r.protocol, r.remotePort, r.localPort
+          ].map((v) => String(v ?? "").toLowerCase()).join(" ");
+          return hay.includes(q);
+        });
       }
       state.rows = list;
     }
@@ -320,6 +379,17 @@
       const showNs = NAMESPACED_VIEWS.has(state.view);
       nsFilter.style.display = showNs ? "" : "none";
       search.style.display = state.view === "overview" ? "none" : "";
+      if (state.view === "portforwarding") {
+        search.placeholder = "Search Port Forwards…";
+      } else {
+        search.placeholder = "Search…";
+      }
+    }
+
+    function formatPfKind(kind) {
+      const k = (kind || "svc").toLowerCase();
+      if (k === "svc" || k === "service" || k === "services") return "service";
+      return k;
     }
 
     function terminalTitle(index) {
@@ -615,11 +685,7 @@
         clusterId: state.activeClusterId,
         namespaces: state.accessibleNamespaces
       });
-      document.getElementById("nsInput").value = state.accessibleNamespaces.join(", ");
-      if (state.accessibleNamespaces.length) {
-        fillNamespaceFilter(state.accessibleNamespaces);
-        document.getElementById("nsBar")?.classList.remove("hidden");
-      }
+      if (state.accessibleNamespaces.length) fillNamespaceFilter(state.accessibleNamespaces);
     }
 
     function openClusterSettings(tab = "namespaces") {
@@ -678,6 +744,270 @@
       updateSidebar();
     }
 
+    function renderKvChips(map) {
+      const entries = Object.entries(map || {});
+      if (!entries.length) return '<span class="muted">—</span>';
+      return entries.map(([k, v]) =>
+        `<span class="k8s-chip" title="${escapeHtml(k + "=" + v)}">${escapeHtml(k)}=${escapeHtml(v)}</span>`
+      ).join(" ");
+    }
+
+    function renderKvList(map, truncate = false) {
+      const entries = Object.entries(map || {});
+      if (!entries.length) return '<span class="muted">—</span>';
+      return entries.map(([k, v]) => {
+        const val = truncate && v.length > 120 ? v.slice(0, 120) + "…" : v;
+        return `<div class="k8s-detail-kv"><span class="k">${escapeHtml(k)}</span><span class="v mono">${escapeHtml(val)}</span></div>`;
+      }).join("");
+    }
+
+    function syncDetailLayout() {
+      const hasSvc = !!state.serviceDetail;
+      const hasPf = !!state.pfDetail;
+      document.getElementById("connectedMain")?.classList.toggle("has-detail", hasSvc || hasPf);
+      document.getElementById("serviceDetailPanel")?.classList.toggle("hidden", !hasSvc);
+      document.getElementById("pfDetailPanel")?.classList.toggle("hidden", !hasPf);
+    }
+
+    function openServiceDetail(name, ns) {
+      closePfDetail();
+      state.serviceDetail = { name, namespace: ns };
+      syncDetailLayout();
+      document.getElementById("serviceDetailBody").innerHTML = '<p class="k8s-detail-loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</p>';
+      send("getServiceDetail", { name, namespace: ns });
+    }
+
+    function closeServiceDetail() {
+      state.serviceDetail = null;
+      document.querySelectorAll("tr.k8s-row-selected").forEach((tr) => tr.classList.remove("k8s-row-selected"));
+      syncDetailLayout();
+    }
+
+    function refreshServiceDetailIfOpen() {
+      const d = state.serviceDetail;
+      if (d?.name && d?.namespace) send("getServiceDetail", { name: d.name, namespace: d.namespace });
+    }
+
+    function getPfItemKey(r) {
+      return r?.configId || r?.id || "";
+    }
+
+    function openPfDetail(item) {
+      if (!item) return;
+      closeServiceDetail();
+      state.pfDetail = { key: getPfItemKey(item), item };
+      syncDetailLayout();
+      renderPfDetail(item);
+    }
+
+    function closePfDetail() {
+      state.pfDetail = null;
+      document.querySelectorAll("tr.k8s-pf-row-selected").forEach((tr) => tr.classList.remove("k8s-pf-row-selected"));
+      syncDetailLayout();
+    }
+
+    function refreshPfDetailIfOpen() {
+      if (!state.pfDetail?.key) return;
+      const updated = (state.allRows || state.rows || []).find((r) => getPfItemKey(r) === state.pfDetail.key);
+      if (updated) {
+        state.pfDetail.item = updated;
+        renderPfDetail(updated);
+      }
+    }
+
+    function getCurrentPfItem() {
+      return state.pfDetail?.item || null;
+    }
+
+    function renderPfDetail(r) {
+      if (!r) return;
+      const url = r.url || `${r.useHttps ? "https" : "http"}://localhost:${r.localPort}`;
+      const statusText = r.status || (r.running ? "Active" : "Disabled");
+      const statusCls = r.running ? "ok" : "muted";
+      const kindLabel = formatPfKind(r.resourceKind);
+
+      document.getElementById("pfDetailTitle").textContent = `Port Forward: ${url}`;
+      document.getElementById("btnPfPlay")?.classList.toggle("hidden", !!r.running);
+      document.getElementById("btnPfStop")?.classList.toggle("hidden", !r.running);
+
+      document.getElementById("pfDetailBody").innerHTML = `
+        <section class="k8s-detail-section">
+          <dl class="k8s-detail-dl">
+            <dt>Resource Name</dt><dd class="mono"><a href="#" class="k8s-detail-link" data-goto-svc="${escapeHtml(r.resourceName)}" data-ns="${escapeHtml(r.namespace)}">${escapeHtml(r.resourceName)}</a></dd>
+            <dt>Namespace</dt><dd class="mono">${escapeHtml(r.namespace)}</dd>
+            <dt>Kind</dt><dd>${escapeHtml(kindLabel)}</dd>
+            <dt>Pod Port</dt><dd class="mono">${r.remotePort}</dd>
+            <dt>Local Port</dt><dd class="mono">${r.localPort}</dd>
+            <dt>Protocol</dt><dd>${escapeHtml(r.protocol || "http")}</dd>
+            <dt>Status</dt><dd><span class="k8s-badge ${statusCls}">${escapeHtml(statusText)}</span></dd>
+          </dl>
+        </section>
+        ${r.error ? `<p class="k8s-detail-error">${escapeHtml(r.error)}</p>` : ""}`;
+
+      document.getElementById("pfDetailBody").querySelectorAll("[data-goto-svc]").forEach((a) => {
+        a.onclick = (e) => {
+          e.preventDefault();
+          setView("services");
+          setTimeout(() => openServiceDetail(a.dataset.gotoSvc, a.dataset.ns), 300);
+        };
+      });
+
+      state.pfDetail = { key: getPfItemKey(r), item: r };
+    }
+
+    function editCurrentPf() {
+      const r = getCurrentPfItem();
+      if (!r) return;
+      openPfModal(r.resourceName, r.namespace, r.remotePort, r.resourceKind, {
+        localPort: r.localPort,
+        useHttps: r.useHttps,
+        openInBrowser: r.openInBrowser,
+        modify: true,
+        skipFetch: true
+      });
+    }
+
+    function startCurrentPf() {
+      const r = getCurrentPfItem();
+      if (!r) return;
+      send("startPortForward", {
+        name: r.resourceName,
+        namespace: r.namespace,
+        port: r.remotePort,
+        resourceKind: r.resourceKind,
+        localPort: r.localPort,
+        useHttps: r.useHttps,
+        openInBrowser: r.openInBrowser
+      });
+    }
+
+    function stopCurrentPf() {
+      const r = getCurrentPfItem();
+      if (!r) return;
+      send("stopPortForward", { portForwardId: r.running ? r.id : (r.configId || r.id) });
+      setTimeout(refreshPfDetailIfOpen, 400);
+    }
+
+    function removeCurrentPf() {
+      const r = getCurrentPfItem();
+      if (!r) return;
+      if (!confirm("Xóa cấu hình port-forward này?")) return;
+      send("removePortForward", { configId: r.configId || r.id });
+      closePfDetail();
+    }
+
+    function renderServiceDetail(data) {
+      if (!data) return;
+      state.serviceDetail = { name: data.name, namespace: data.namespace, data };
+      document.getElementById("serviceDetailTitle").textContent = `Service: ${data.name}`;
+      const body = document.getElementById("serviceDetailBody");
+
+      const portRows = (data.ports || []).map((p) => {
+        const label = `${p.port}/${p.protocol || "TCP"}`;
+        const pfBtn = p.forwarding
+          ? `<button type="button" class="k8s-btn sm" data-pf-act="stop" data-pf-id="${escapeHtml(p.portForwardId || p.configId || "")}">Stop/Remove</button>`
+          : `<button type="button" class="k8s-btn sm primary" data-pf-act="start" data-port="${p.port}">Forward</button>`;
+        return `<div class="k8s-detail-port-row">
+          <a href="#" class="k8s-detail-port-link" data-pf-act="start" data-port="${p.port}">${escapeHtml(label)}</a>
+          ${pfBtn}
+        </div>`;
+      }).join("") || '<span class="muted">—</span>';
+
+      const epSliceRows = (data.endpointSlices || []).length
+        ? (data.endpointSlices || []).map((r) =>
+          `<tr><td class="mono">${escapeHtml(r.name)}</td><td class="mono muted">${escapeHtml(r.endpoints)}</td></tr>`
+        ).join("")
+        : '<tr><td colspan="2" class="muted">No endpoint slices</td></tr>';
+
+      const epRows = (data.endpoints || []).length
+        ? (data.endpoints || []).map((r) =>
+          `<tr><td class="mono">${escapeHtml(r.name)}</td><td class="mono muted">${escapeHtml(r.endpoints)}</td></tr>`
+        ).join("")
+        : '<tr><td colspan="2" class="muted">—</td></tr>';
+
+      const eventRows = (data.events || []).length
+        ? (data.events || []).map((e) =>
+          `<tr><td>${escapeHtml(e.type)}</td><td>${escapeHtml(e.reason)}</td><td class="muted">${escapeHtml(e.message)}</td><td class="muted">${escapeHtml(e.age)}</td></tr>`
+        ).join("")
+        : '<tr><td colspan="4" class="muted">No events</td></tr>';
+
+      body.innerHTML = `
+        <section class="k8s-detail-section">
+          <h3>Properties</h3>
+          <dl class="k8s-detail-dl">
+            <dt>Created</dt><dd>${escapeHtml(data.created)} ago <span class="muted">(${escapeHtml(data.createdAt)})</span></dd>
+            <dt>Name</dt><dd class="mono">${escapeHtml(data.name)}</dd>
+            <dt>Namespace</dt><dd class="mono"><a href="#" class="k8s-detail-link" data-ns-link="${escapeHtml(data.namespace)}">${escapeHtml(data.namespace)}</a></dd>
+            <dt>Labels</dt><dd class="k8s-chips">${renderKvChips(data.labels)}</dd>
+            <dt>Annotations</dt><dd class="k8s-detail-annotations">${renderKvList(data.annotations, true)}</dd>
+            <dt>Selector</dt><dd class="k8s-chips">${renderKvChips(data.selector)}</dd>
+            <dt>Type</dt><dd>${escapeHtml(data.type)}</dd>
+            <dt>Session Affinity</dt><dd>${escapeHtml(data.sessionAffinity)}</dd>
+          </dl>
+        </section>
+        <section class="k8s-detail-section">
+          <h3>Connection</h3>
+          <dl class="k8s-detail-dl">
+            <dt>Cluster IP</dt><dd class="mono">${escapeHtml(data.clusterIP || "—")}</dd>
+            <dt>Cluster IPs</dt><dd class="mono">${escapeHtml((data.clusterIPs || []).join(", ") || "—")}</dd>
+            <dt>IP families</dt><dd>${escapeHtml(data.ipFamilies || "—")}</dd>
+            <dt>IP family policy</dt><dd>${escapeHtml(data.ipFamilyPolicy || "—")}</dd>
+            <dt>Ports</dt><dd class="k8s-detail-ports-cell"><div class="k8s-detail-ports">${portRows}</div></dd>
+          </dl>
+        </section>
+        <section class="k8s-detail-section">
+          <h3>Endpoint Slices</h3>
+          <div class="k8s-detail-table-wrap">
+          <table class="k8s-detail-table"><thead><tr><th>Name</th><th>Endpoints</th></tr></thead><tbody>${epSliceRows}</tbody></table>
+          </div>
+        </section>
+        <section class="k8s-detail-section">
+          <h3>Endpoints</h3>
+          <div class="k8s-detail-table-wrap">
+          <table class="k8s-detail-table"><thead><tr><th>Name</th><th>Endpoints</th></tr></thead><tbody>${epRows}</tbody></table>
+          </div>
+        </section>
+        <section class="k8s-detail-section">
+          <h3>Events</h3>
+          <div class="k8s-detail-table-wrap">
+          <table class="k8s-detail-table"><thead><tr><th>Type</th><th>Reason</th><th>Message</th><th>Age</th></tr></thead><tbody>${eventRows}</tbody></table>
+          </div>
+        </section>`;
+
+      body.querySelectorAll("[data-pf-act]").forEach((btn) => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          const port = parseInt(btn.dataset.port, 10);
+          const act = btn.dataset.pfAct;
+          if (act === "stop") {
+            send("stopPortForward", { portForwardId: btn.dataset.pfId, name: data.name, namespace: data.namespace });
+            setTimeout(refreshServiceDetailIfOpen, 400);
+          } else if (act === "start" && port > 0) {
+            const p = (data.ports || []).find((x) => x.port === port);
+            openPfModal(data.name, data.namespace, port, "svc", {
+              localPort: p?.localPort ?? port,
+              useHttps: p?.useHttps,
+              openInBrowser: p?.openInBrowser,
+              modify: p?.forwarding
+            });
+          }
+        };
+      });
+
+      body.querySelectorAll("[data-ns-link]").forEach((a) => {
+        a.onclick = (e) => {
+          e.preventDefault();
+          const ns = a.dataset.nsLink;
+          if (ns) { state.nsFilter = ns; document.getElementById("nsFilter").value = ns; applyFilters(); }
+        };
+      });
+    }
+
+    function setLoading(on) {
+      state.loading = !!on;
+      document.getElementById("loadingOverlay")?.classList.toggle("hidden", !on);
+    }
+
     function showDashboard(clusterName, context, opts = {}) {
       state.connected = true;
       state.sidebarMode = "cluster";
@@ -705,11 +1035,81 @@
       } else if (state.accessibleNamespaces.length) {
         fillNamespaceFilter(state.accessibleNamespaces);
       }
-      const nsBar = document.getElementById("nsBar");
-      if (opts.limitedRbac || opts.showNamespaceBar || state.accessibleNamespaces.length) {
-        nsBar.classList.remove("hidden");
-        if (state.accessibleNamespaces.length) document.getElementById("nsInput").value = state.accessibleNamespaces.join(", ");
-      } else nsBar.classList.add("hidden");
+
+      if (opts.loading) {
+        setLoading(true);
+        state.view = "pods";
+        state.rows = [];
+        state.allRows = [];
+        document.querySelectorAll(".k8s-nav-item[data-view]").forEach((el) => {
+          el.classList.toggle("active", el.dataset.view === "pods");
+        });
+        document.getElementById("viewTitle").textContent = "Pods";
+        document.getElementById("overviewPanel")?.classList.add("hidden");
+        document.getElementById("tablePanel")?.classList.remove("hidden");
+        document.getElementById("emptyState")?.classList.add("hidden");
+        document.getElementById("tableHead").innerHTML = "";
+        document.getElementById("tableBody").innerHTML = "";
+        document.getElementById("statusLine").textContent = "Đang tải…";
+      }
+    }
+
+    function applyClusterData(payload) {
+      if (!payload) return;
+      state.accessibleNamespaces = [...(payload.namespaces || [])];
+      if (payload.namespaceList?.length) {
+        state.namespaceList = payload.namespaceList;
+        fillNamespaceFilter(payload.namespaceList);
+      } else if (state.accessibleNamespaces.length) {
+        fillNamespaceFilter(state.accessibleNamespaces);
+      }
+      ["errorBanner","infoBanner"].forEach((id) => document.getElementById(id).classList.add("hidden"));
+      if (payload.noWorkloadAccess && payload.permissionInfo) {
+        const el = document.getElementById("errorBanner");
+        el.textContent = payload.permissionInfo; el.classList.remove("hidden");
+      } else if (payload.permissionInfo) {
+        const el = document.getElementById("infoBanner");
+        el.textContent = payload.permissionInfo; el.classList.remove("hidden");
+      }
+    }
+
+    function openPfModal(name, ns, port, kind, opts = {}) {
+      state.pfPending = { name, ns, port, kind: kind || "svc", configId: opts.configId || "" };
+      document.getElementById("pfModalResource").textContent = name;
+      document.getElementById("pfLocalPort").value = opts.localPort ?? port;
+      document.getElementById("pfHttps").checked = !!opts.useHttps;
+      document.getElementById("pfOpenBrowser").checked = !!opts.openInBrowser;
+      document.getElementById("pfStart").textContent = opts.modify ? "Modify" : "Start";
+      document.getElementById("pfModal").classList.remove("hidden");
+      if (!opts.skipFetch) {
+        send("getPortForwardDefaults", { name, namespace: ns, port, resourceKind: kind || "svc" });
+      }
+    }
+
+    function closePfModal() {
+      document.getElementById("pfModal").classList.add("hidden");
+      state.pfPending = null;
+    }
+
+    function submitPfModal() {
+      const p = state.pfPending;
+      if (!p) return;
+      const localPort = parseInt(document.getElementById("pfLocalPort").value, 10);
+      if (!localPort || localPort < 1 || localPort > 65535) {
+        showToast("Local port không hợp lệ (1–65535)");
+        return;
+      }
+      send("startPortForward", {
+        name: p.name,
+        namespace: p.ns,
+        port: p.port,
+        resourceKind: p.kind,
+        localPort,
+        useHttps: document.getElementById("pfHttps").checked,
+        openInBrowser: document.getElementById("pfOpenBrowser").checked
+      });
+      closePfModal();
+      setTimeout(() => { refreshServiceDetailIfOpen(); refreshPfDetailIfOpen(); }, 400);
     }
 
     function renderOverview(data) {
@@ -735,6 +1135,8 @@
 
       if (state.view === "overview") return;
 
+      document.querySelector("#tablePanel .k8s-table")?.classList.remove("pf-table");
+
       overview.classList.add("hidden");
       tablePanel.classList.remove("hidden");
       body.innerHTML = "";
@@ -749,6 +1151,7 @@
       const hasNs = state.rows.some((r) => r.namespace);
       const hasDetail = state.rows.some((r) => r.detail);
       const isPods = state.view === "pods";
+      const isServices = state.view === "services";
 
       let headHtml = "<tr><th>Name</th>";
       if (hasNs) headHtml += "<th>Namespace</th>";
@@ -757,12 +1160,16 @@
       else if (hasDetail) headHtml += "<th>Detail</th>";
       headHtml += "<th>Age</th>";
       if (isPods) headHtml += '<th class="actions">Actions</th>';
+      else if (isServices) headHtml += '<th class="actions">Port Forward</th>';
       headHtml += "</tr>";
       head.innerHTML = headHtml;
 
       state.rows.forEach((r) => {
         const tr = document.createElement("tr");
-        let html = `<td class="mono">${escapeHtml(r.name)}</td>`;
+        if (isServices && state.serviceDetail?.name === r.name && state.serviceDetail?.namespace === r.namespace) {
+          tr.classList.add("k8s-row-selected");
+        }
+        let html = `<td class="mono${isServices ? " k8s-svc-name" : ""}">${escapeHtml(r.name)}</td>`;
         if (hasNs) html += `<td class="muted">${escapeHtml(r.namespace)}</td>`;
         html += `<td>${statusBadge(r.status)}</td>`;
         if (isPods) html += `<td>${r.restartCount ?? 0}</td>`;
@@ -775,23 +1182,156 @@
             <button class="k8s-icon-btn yaml" title="YAML" data-act="yaml" data-name="${escapeHtml(r.name)}" data-ns="${escapeHtml(r.namespace)}"><i class="fa-solid fa-pen"></i></button>
             <button class="k8s-icon-btn del" title="Delete" data-act="delete" data-name="${escapeHtml(r.name)}" data-ns="${escapeHtml(r.namespace)}"><i class="fa-solid fa-trash"></i></button>
           </td>`;
+        } else if (isServices) {
+          const ports = Array.isArray(r.ports) ? r.ports : [];
+          if (!ports.length) {
+            html += '<td class="muted">—</td>';
+          } else {
+            html += `<td class="actions pf-actions">${ports.map((p) =>
+              `<button type="button" class="k8s-btn sm primary" title="Forward port ${p.port}" data-act="pf" data-name="${escapeHtml(r.name)}" data-ns="${escapeHtml(r.namespace)}" data-port="${p.port}" data-kind="svc"><i class="fa-solid fa-arrow-right-arrow-left"></i> ${p.port}</button>`
+            ).join(" ")}</td>`;
+          }
         }
         tr.innerHTML = html;
         body.appendChild(tr);
+        if (isServices) {
+          tr.style.cursor = "pointer";
+          tr.onclick = (e) => {
+            if (e.target.closest("button")) return;
+            openServiceDetail(r.name, r.namespace);
+            body.querySelectorAll("tr.k8s-row-selected").forEach((row) => row.classList.remove("k8s-row-selected"));
+            tr.classList.add("k8s-row-selected");
+          };
+        }
       });
 
       body.querySelectorAll("button[data-act]").forEach((btn) => {
-        btn.onclick = () => {
-          const { name, ns, act, container } = btn.dataset;
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const { name, ns, act, container, port, kind } = btn.dataset;
           if (act === "logs") send("getLogs", { podName: name, namespace: ns });
           else if (act === "yaml") send("getYaml", { podName: name, namespace: ns });
           else if (act === "shell") send("podShell", { podName: name, namespace: ns, container: container || "" });
           else if (act === "delete" && confirm(`Xóa pod ${ns}/${name}?`)) send("deletePod", { podName: name, namespace: ns });
+          else if (act === "pf") openPfModal(name, ns, parseInt(port, 10), kind || "svc");
         };
       });
     }
 
+    function onPortForwardsReceived(payload) {
+      state.view = "portforwarding";
+      state.allRows = payload || [];
+      applyFilters();
+      document.querySelectorAll(".k8s-nav-item[data-view]").forEach((el) => {
+        el.classList.toggle("active", el.dataset.view === "portforwarding");
+      });
+      document.getElementById("viewTitle").textContent = "Port Forwarding";
+      updateToolbarForView();
+      renderPortForwardTable();
+    }
+
+    function renderPortForwardTable() {
+      const prevPfKey = state.pfDetail?.key;
+      const overview = document.getElementById("overviewPanel");
+      const tablePanel = document.getElementById("tablePanel");
+      const empty = document.getElementById("emptyState");
+      const head = document.getElementById("tableHead");
+      const body = document.getElementById("tableBody");
+      overview.classList.add("hidden");
+      tablePanel.classList.remove("hidden");
+      body.innerHTML = "";
+
+      if (!state.allRows?.length) {
+        empty.classList.remove("hidden");
+        empty.textContent = "Chưa có port-forward — vào Services, bấm port để forward.";
+        head.innerHTML = "";
+        document.getElementById("statusLine").textContent = "0 items";
+        closePfDetail();
+        return;
+      }
+
+      if (!state.rows?.length) {
+        empty.classList.remove("hidden");
+        empty.textContent = "Không có kết quả khớp tìm kiếm.";
+        head.innerHTML = `<tr>
+          <th>Name</th><th>Namespace</th><th>Kind</th><th>Pod Port</th><th>Local Port</th><th>Protocol</th><th>Status</th><th class="actions">Actions</th>
+        </tr>`;
+        document.getElementById("statusLine").textContent = "0 items";
+        return;
+      }
+
+      empty.classList.add("hidden");
+      empty.textContent = "No resources in this namespace.";
+
+      head.innerHTML = `<tr>
+        <th>Name</th><th>Namespace</th><th>Kind</th><th>Pod Port</th><th>Local Port</th><th>Protocol</th><th>Status</th><th class="actions">Actions</th>
+      </tr>`;
+      const pfTable = document.getElementById("tablePanel")?.querySelector(".k8s-table");
+      pfTable?.classList.add("pf-table");
+
+      state.rows.forEach((r) => {
+        const tr = document.createElement("tr");
+        const key = getPfItemKey(r);
+        if (state.pfDetail?.key === key) tr.classList.add("k8s-pf-row-selected");
+        const statusText = r.status || (r.running ? "Active" : "Disabled");
+        tr.innerHTML = `
+          <td class="mono k8s-svc-name">${escapeHtml(r.resourceName)}</td>
+          <td class="k8s-ns-link">${escapeHtml(r.namespace)}</td>
+          <td class="muted">${escapeHtml(formatPfKind(r.resourceKind))}</td>
+          <td class="mono">${r.remotePort}</td>
+          <td class="mono">${r.localPort}</td>
+          <td>${escapeHtml(r.protocol || "http")}</td>
+          <td>${statusBadge(statusText)}</td>
+          <td class="actions pf-list-actions">
+            ${r.running
+              ? `<button type="button" class="k8s-btn sm pf-row-btn" title="Stop" data-pf-act="stop" data-id="${escapeHtml(r.id)}" data-cid="${escapeHtml(r.configId || r.id)}"><i class="fa-solid fa-stop"></i> Stop</button>`
+              : `<button type="button" class="k8s-btn sm primary pf-row-btn" title="Start" data-pf-act="start" data-name="${escapeHtml(r.resourceName)}" data-ns="${escapeHtml(r.namespace)}" data-port="${r.remotePort}" data-kind="${escapeHtml(r.resourceKind)}" data-local="${r.localPort}" data-https="${r.useHttps ? "1" : "0"}" data-browser="${r.openInBrowser ? "1" : "0"}"><i class="fa-solid fa-play"></i> Start</button>`
+            }
+          </td>`;
+        tr.style.cursor = "pointer";
+        tr.onclick = (e) => {
+          if (e.target.closest("button")) return;
+          openPfDetail(r);
+          body.querySelectorAll("tr.k8s-pf-row-selected").forEach((row) => row.classList.remove("k8s-pf-row-selected"));
+          tr.classList.add("k8s-pf-row-selected");
+        };
+        body.appendChild(tr);
+      });
+
+      body.querySelectorAll("button[data-pf-act]").forEach((btn) => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const { act, id, name, ns, port, kind, local, https, browser } = btn.dataset;
+          if (act === "stop") {
+            send("stopPortForward", { portForwardId: id || btn.dataset.cid });
+            setTimeout(refreshPfDetailIfOpen, 400);
+          } else if (act === "start") {
+            send("startPortForward", {
+              name, namespace: ns, port: parseInt(port, 10), resourceKind: kind,
+              localPort: parseInt(local, 10), useHttps: https === "1", openInBrowser: browser === "1"
+            });
+          }
+        };
+      });
+
+      if (prevPfKey) {
+        const updated = state.rows.find((r) => getPfItemKey(r) === prevPfKey);
+        if (updated) {
+          state.pfDetail = { key: prevPfKey, item: updated };
+          syncDetailLayout();
+          renderPfDetail(updated);
+        } else {
+          closePfDetail();
+        }
+      }
+
+      const active = state.allRows.filter((r) => r.running).length;
+      document.getElementById("statusLine").textContent = `${state.rows.length} items · ${active} active`;
+    }
+
     function onListReceived(view, payload) {
+      if (view !== "services") closeServiceDetail();
+      if (view !== "portforwarding") closePfDetail();
       state.view = view;
       state.allRows = payload || [];
       applyFilters();
@@ -805,6 +1345,8 @@
     }
 
     function setView(view) {
+      if (view !== "services") closeServiceDetail();
+      if (view !== "portforwarding") closePfDetail();
       state.view = view;
       document.querySelectorAll(".k8s-nav-item[data-view]").forEach((el) => {
         el.classList.toggle("active", el.dataset.view === view);
@@ -824,6 +1366,8 @@
       state.sidebarMode = "cluster";
       renderSidebarClusterList();
       document.getElementById("connectError")?.classList.add("hidden");
+      const displayName = (c.name || c.context || "").replace(/^\★\s*/, "");
+      showDashboard(displayName, c.context || "", { clusterId: c.id, loading: true, color: c.color });
       send("connectCluster", { clusterId: c.id, context: c.context || "" });
     }
 
@@ -911,6 +1455,10 @@
     document.getElementById("btnBackClusters").onclick = () => showClusterPicker();
 
     document.getElementById("btnOpenTerminal").onclick = () => createTerminalSession();
+    document.getElementById("btnLogoutCluster").onclick = () => {
+      if (confirm("Đăng xuất cluster? Phiên sẽ xóa — cần đăng nhập lại khi kết nối."))
+        send("logoutCluster");
+    };
     document.getElementById("btnAddTerminal").onclick = () => createTerminalSession();
     document.getElementById("btnBrowseKube").onclick = () => send("browseKubeConfig");
     document.getElementById("btnRefreshClusters").onclick = () => send("listClusters");
@@ -937,6 +1485,10 @@
         return;
       }
       if (act === "disconnect") send("disconnectCluster");
+      else if (act === "logout") {
+        if (confirm("Đăng xuất cluster? Lần sau cần chọn cluster / az login lại."))
+          send("logoutCluster");
+      }
       else if (act === "settings") openClusterSettings("namespaces");
       else if (act === "remove") {
         if (confirm(`Xóa/ẩn cluster "${state.activeClusterName}" khỏi kubeconfig?`))
@@ -976,11 +1528,6 @@
     };
 
     document.getElementById("btnRefresh").onclick = () => send("refresh", { view: state.view });
-    document.getElementById("btnSaveNs").onclick = () => {
-      const raw = document.getElementById("nsInput").value.trim();
-      if (!raw) return;
-      send("saveNamespaces", { context: state.activeContext, namespaces: raw.split(/[,;]+/).map((s) => s.trim()).filter(Boolean), name: raw });
-    };
     document.getElementById("modalClose").onclick = hideModal;
     document.getElementById("modalSave").onclick = () => {
       if (state.yamlEditable) send("applyYaml", { yaml: document.getElementById("modalContent").value });
@@ -988,7 +1535,13 @@
     };
     document.getElementById("modal").onclick = (e) => { if (e.target.id === "modal") hideModal(); };
     document.getElementById("nsFilter").onchange = (e) => { state.nsFilter = e.target.value; applyFilters(); renderTable(); document.getElementById("statusLine").textContent = `${state.rows.length} items`; };
-    document.getElementById("podSearch").oninput = (e) => { state.search = e.target.value; applyFilters(); renderTable(); document.getElementById("statusLine").textContent = `${state.rows.length} items`; };
+    document.getElementById("podSearch").oninput = (e) => {
+      state.search = e.target.value;
+      applyFilters();
+      if (state.view === "portforwarding") renderPortForwardTable();
+      else renderTable();
+      document.getElementById("statusLine").textContent = `${state.rows.length} items`;
+    };
     document.getElementById("terminalSearch")?.addEventListener("input", (e) => {
       state.terminal.search = e.target.value;
       applyTerminalSearch();
@@ -1016,14 +1569,39 @@
           showDashboard(payload.clusterName || "Cluster", payload.context || "", payload);
           state.activeClusterId = payload.clusterId || state.activeClusterId;
           renderSidebarClusterList();
-          if (payload.noWorkloadAccess && payload.permissionInfo) {
-            const el = document.getElementById("errorBanner");
-            el.textContent = payload.permissionInfo; el.classList.remove("hidden");
-          } else if (payload.permissionInfo) {
-            const el = document.getElementById("infoBanner");
-            el.textContent = payload.permissionInfo; el.classList.remove("hidden");
+          if (!payload.loading) {
+            if (payload.noWorkloadAccess && payload.permissionInfo) {
+              const el = document.getElementById("errorBanner");
+              el.textContent = payload.permissionInfo; el.classList.remove("hidden");
+            } else if (payload.permissionInfo) {
+              const el = document.getElementById("infoBanner");
+              el.textContent = payload.permissionInfo; el.classList.remove("hidden");
+            }
           }
           showToast(payload.message || "Đã kết nối");
+        }
+        else if (type === "clusterData") applyClusterData(payload);
+        else if (type === "loadingDone") setLoading(false);
+        else if (type === "portForwardDefaults" && state.pfPending) {
+          if (payload?.localPort) document.getElementById("pfLocalPort").value = payload.localPort;
+          document.getElementById("pfHttps").checked = !!payload?.useHttps;
+          document.getElementById("pfOpenBrowser").checked = !!payload?.openInBrowser;
+        }
+        else if (type === "portForwardStarted") {
+          showToast(payload?.message || "Port-forward started");
+          if (payload?.openInBrowser && payload?.url) window.open(payload.url, "_blank", "noopener");
+          refreshServiceDetailIfOpen();
+          refreshPfDetailIfOpen();
+        }
+        else if (type === "serviceDetail") renderServiceDetail(payload);
+        else if (type === "serviceDetailClosed") closeServiceDetail();
+        else if (type === "serviceYaml") showModal(`YAML — Service ${payload.ns}/${payload.name}`, payload.text, true);
+        else if (type === "connectFailed") {
+          setLoading(false);
+          showConnectScreen();
+          const el = document.getElementById("connectError");
+          el.textContent = payload?.message || "Kết nối thất bại";
+          el.classList.remove("hidden");
         }
         else if (type === "disconnected") {
           showConnectScreen();
@@ -1037,6 +1615,7 @@
           renderOverview(payload || {});
           document.getElementById("statusLine").textContent = "";
         }
+        else if (type === "portforwarding") onPortForwardsReceived(payload || []);
         else if (LIST_VIEWS.has(type)) onListReceived(type, payload);
         else if (type === "terminalStarted") {
           openBottomTerminal();
@@ -1052,7 +1631,15 @@
         else if (type === "terminalOpened") appendTerminal(payload?.message || "Terminal opened");
         else if (type === "logs") showModal(`Logs — ${payload.ns}/${payload.podName}`, payload.text, false);
         else if (type === "yaml") showModal(`YAML — ${payload.ns}/${payload.podName}`, payload.text, true);
-        else if (type === "info") { const el = document.getElementById("infoBanner"); el.textContent = payload?.message || ""; el.classList.toggle("hidden", !payload?.message); }
+        else if (type === "info") {
+          const el = document.getElementById("infoBanner");
+          let msg = payload?.message || "";
+          if (payload?.showNamespaceBar && msg) {
+            msg += "\n\nMở Cluster Settings (click tên cluster) → Namespaces để chỉnh danh sách.";
+          }
+          el.textContent = msg;
+          el.classList.toggle("hidden", !msg);
+        }
         else if (type === "error") {
           const el = state.connected ? document.getElementById("errorBanner") : document.getElementById("connectError");
           el.textContent = payload?.message || "Lỗi"; el.classList.remove("hidden");
@@ -1067,6 +1654,27 @@
         else if (type === "clusterImported") send("listClusters");
       });
     }
+
+    document.getElementById("btnServiceDetailClose").onclick = closeServiceDetail;
+    document.getElementById("btnPfDetailClose").onclick = closePfDetail;
+    document.getElementById("btnPfEdit").onclick = editCurrentPf;
+    document.getElementById("btnPfPlay").onclick = startCurrentPf;
+    document.getElementById("btnPfStop").onclick = stopCurrentPf;
+    document.getElementById("btnPfDelete").onclick = removeCurrentPf;
+    document.getElementById("btnServiceYaml").onclick = () => {
+      const d = state.serviceDetail;
+      if (d?.name) send("getServiceYaml", { name: d.name, namespace: d.namespace });
+    };
+    document.getElementById("btnServiceDelete").onclick = () => {
+      const d = state.serviceDetail;
+      if (!d?.name) return;
+      if (confirm(`Xóa service ${d.namespace}/${d.name}?`)) send("deleteService", { name: d.name, namespace: d.namespace });
+    };
+
+    document.getElementById("pfModalClose").onclick = closePfModal;
+    document.getElementById("pfCancel").onclick = closePfModal;
+    document.getElementById("pfStart").onclick = submitPfModal;
+    document.getElementById("pfModal").onclick = (e) => { if (e.target.id === "pfModal") closePfModal(); };
 
     applyTheme(localStorage.getItem("mcp-theme") || "dark");
     initTerminalResize();

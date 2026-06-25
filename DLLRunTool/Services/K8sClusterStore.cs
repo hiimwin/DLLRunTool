@@ -68,6 +68,112 @@ public static class K8sClusterStore
             yield return file;
     }
 
+    /// <summary>
+    /// Lens lưu namespace user được phép trong lens-cluster-store.json (accessibleNamespaces).
+  /// Đọc để gợi ý khi RBAC không cho list cluster-wide — tránh báo sai «không có quyền pods».
+    /// </summary>
+    public static IEnumerable<string> GetLensNamespaceHints()
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var ns in ReadLensAccessibleNamespaces())
+        {
+            if (seen.Add(ns))
+                yield return ns;
+        }
+
+        foreach (var ns in ReadLensSelectedNamespaces())
+        {
+            if (seen.Add(ns))
+                yield return ns;
+        }
+    }
+
+    private static IEnumerable<string> ReadLensAccessibleNamespaces()
+    {
+        var path = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Lens",
+            "lens-cluster-store.json");
+        if (!File.Exists(path))
+            return [];
+
+        try
+        {
+            var list = new List<string>();
+            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            if (!doc.RootElement.TryGetProperty("clusters", out var clusters))
+                return list;
+
+            foreach (var cluster in clusters.EnumerateArray())
+            {
+                if (!cluster.TryGetProperty("accessibleNamespaces", out var nsList))
+                    continue;
+
+                foreach (var item in nsList.EnumerateArray())
+                {
+                    var ns = item.GetString()?.Trim();
+                    if (!string.IsNullOrWhiteSpace(ns))
+                        list.Add(ns);
+                }
+            }
+
+            return list;
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private static IEnumerable<string> ReadLensSelectedNamespaces()
+    {
+        var baseDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Lens",
+            "persisted-state",
+            "selecting-namespaces");
+        if (!Directory.Exists(baseDir))
+            return [];
+
+        var list = new List<string>();
+        foreach (var dir in Directory.EnumerateDirectories(baseDir))
+        {
+            var file = Path.Combine(dir, "latest-selected-namespaces.json");
+            if (!File.Exists(file))
+                continue;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(file));
+                if (doc.RootElement.TryGetProperty("namespaces", out var nsList))
+                {
+                    foreach (var item in nsList.EnumerateArray())
+                    {
+                        var ns = item.GetString()?.Trim();
+                        if (!string.IsNullOrWhiteSpace(ns))
+                            list.Add(ns);
+                    }
+                }
+                else if (doc.RootElement.TryGetProperty("value", out var valueList))
+                {
+                    foreach (var item in valueList.EnumerateArray())
+                    {
+                        var ns = item.GetString()?.Trim();
+                        if (!string.IsNullOrWhiteSpace(ns))
+                            list.Add(ns);
+                    }
+                }
+            }
+            catch
+            {
+                // ignore per-cluster parse errors
+            }
+        }
+
+        return list;
+    }
+
     public static IReadOnlyList<K8sClusterUiDto> GetAllForUi()
     {
         EnsureLoaded();
@@ -78,20 +184,21 @@ public static class K8sClusterStore
         var hidden = new HashSet<string>(local.HiddenClusterIds ?? [], StringComparer.OrdinalIgnoreCase);
 
         var merged = new Dictionary<string, K8sClusterEntry>(StringComparer.OrdinalIgnoreCase);
-        foreach (var c in shared.Clusters)
+        foreach (var c in shared.Clusters ?? [])
         {
             if (!string.IsNullOrWhiteSpace(c.Id))
                 merged[c.Id] = c;
         }
 
-        foreach (var c in local.Clusters)
+        foreach (var c in local.Clusters ?? [])
         {
             if (!string.IsNullOrWhiteSpace(c.Id))
                 merged[c.Id] = c;
         }
 
+        var sharedClusters = shared.Clusters ?? [];
         var list = merged.Values
-            .Select(e => ToUiDto(e, shared.Clusters.Any(s => s.Id == e.Id), local, hotbar))
+            .Select(e => ToUiDto(e, sharedClusters.Any(s => s.Id == e.Id), local, hotbar))
             .Where(d => !hidden.Contains(d.Id))
             .ToList();
 
@@ -236,12 +343,13 @@ public static class K8sClusterStore
 
     private static string ResolveClusterColor(K8sClustersFile local, string? clusterId, string? context)
     {
+        var colors = local.ClusterColors ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (!string.IsNullOrWhiteSpace(clusterId)
-            && local.ClusterColors.TryGetValue(clusterId, out var byId))
+            && colors.TryGetValue(clusterId, out var byId))
             return NormalizeColor(byId);
 
         if (!string.IsNullOrWhiteSpace(context)
-            && local.ClusterColors.TryGetValue(context, out var byCtx))
+            && colors.TryGetValue(context, out var byCtx))
             return NormalizeColor(byCtx);
 
         return "yellow";
@@ -295,6 +403,70 @@ public static class K8sClusterStore
         SaveLocal(local);
     }
 
+    public static void SaveLastSession(string clusterId, string? context, string? kubeConfigPath)
+    {
+        if (string.IsNullOrWhiteSpace(clusterId))
+            return;
+
+        EnsureLoaded();
+        var local = LoadFile(LocalFilePath);
+        local.LastConnectedId = clusterId;
+        local.LastSession = new K8sLastSession
+        {
+            ClusterId = clusterId,
+            Context = context ?? "",
+            KubeConfigPath = kubeConfigPath,
+            Remember = true
+        };
+        SaveLocal(local);
+    }
+
+    public static K8sLastSession? GetLastSession()
+    {
+        EnsureLoaded();
+        var local = LoadFile(LocalFilePath);
+        var session = local.LastSession;
+        if (session != null && session.Remember && !string.IsNullOrWhiteSpace(session.ClusterId))
+            return session;
+
+        if (!string.IsNullOrWhiteSpace(local.LastConnectedId))
+        {
+            return new K8sLastSession
+            {
+                ClusterId = local.LastConnectedId,
+                Remember = true
+            };
+        }
+
+        return null;
+    }
+
+    public static void ClearLastSession()
+    {
+        EnsureLoaded();
+        var local = LoadFile(LocalFilePath);
+        local.LastConnectedId = null;
+        local.LastSession = new K8sLastSession { Remember = false };
+        SaveLocal(local);
+    }
+
+    public static string? ResolveClusterIdForSession(K8sLastSession session)
+    {
+        if (K8sClusterStore.Resolve(session.ClusterId) != null)
+            return session.ClusterId;
+
+        if (!string.IsNullOrWhiteSpace(session.Context))
+        {
+            foreach (var dto in GetAllForUi())
+            {
+                if (string.Equals(dto.Context, session.Context, StringComparison.OrdinalIgnoreCase))
+                    return dto.Id;
+            }
+        }
+
+        return session.ClusterId;
+    }
+
     public static IReadOnlyList<string> ResolveNamespaces(string? clusterId, string? context)
     {
         EnsureLoaded();
@@ -316,7 +488,8 @@ public static class K8sClusterStore
         if (!string.IsNullOrWhiteSpace(context))
         {
             var local = LoadFile(LocalFilePath);
-            if (local.NamespaceByContext.TryGetValue(context, out var fromContext))
+            var byContext = local.NamespaceByContext ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            if (byContext.TryGetValue(context, out var fromContext))
             {
                 foreach (var ns in fromContext)
                 {
@@ -324,9 +497,38 @@ public static class K8sClusterStore
                         merged.Add(ns.Trim());
                 }
             }
+
+            foreach (var ns in GetNamespacesForContextFromCatalog(context))
+                merged.Add(ns);
         }
 
         return merged.OrderBy(n => n).ToList();
+    }
+
+    /// <summary>Namespace team cấu hình trong k8s.clusters.json — mang theo khi copy tool sang máy khác.</summary>
+    public static IEnumerable<string> GetNamespacesForContextFromCatalog(string context)
+    {
+        if (string.IsNullOrWhiteSpace(context))
+            yield break;
+
+        EnsureLoaded();
+        var shared = LoadFile(SharedFilePath);
+        var local = LoadFile(LocalFilePath);
+
+        foreach (var entry in (shared.Clusters ?? []).Concat(local.Clusters ?? []))
+        {
+            if (!string.Equals(entry.Context, context, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (entry.Namespaces == null)
+                continue;
+
+            foreach (var ns in entry.Namespaces)
+            {
+                if (!string.IsNullOrWhiteSpace(ns))
+                    yield return ns.Trim();
+            }
+        }
     }
 
     public static void SaveNamespacesForContext(string context, IEnumerable<string> namespaces)
@@ -336,6 +538,7 @@ public static class K8sClusterStore
 
         EnsureLoaded();
         var local = LoadFile(LocalFilePath);
+        local.NamespaceByContext ??= new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         local.NamespaceByContext[context] = namespaces
             .Where(n => !string.IsNullOrWhiteSpace(n))
             .Select(n => n.Trim())
@@ -507,19 +710,37 @@ public static class K8sClusterStore
 
     private static K8sClustersFile LoadFile(string path)
     {
+        K8sClustersFile file;
         if (!File.Exists(path))
-            return new K8sClustersFile();
+        {
+            file = new K8sClustersFile();
+        }
+        else
+        {
+            try
+            {
+                file = JsonSerializer.Deserialize<K8sClustersFile>(File.ReadAllText(path), JsonOptions)
+                       ?? new K8sClustersFile();
+            }
+            catch
+            {
+                file = new K8sClustersFile();
+            }
+        }
 
-        try
-        {
-            return JsonSerializer.Deserialize<K8sClustersFile>(File.ReadAllText(path), JsonOptions)
-                   ?? new K8sClustersFile();
-        }
-        catch
-        {
-            return new K8sClustersFile();
-        }
+        file.Clusters ??= [];
+        file.NamespaceByContext ??= new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        file.HotbarIds ??= [];
+        file.HiddenClusterIds ??= [];
+        file.ClusterColors ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        file.PortForwardsByContext ??= new Dictionary<string, List<K8sPortForwardConfig>>(StringComparer.OrdinalIgnoreCase);
+        file.LastSession ??= new K8sLastSession { Remember = false };
+        return file;
     }
+
+    public static K8sClustersFile LoadLocalFile() => LoadFile(LocalFilePath);
+
+    public static void SaveLocalFile(K8sClustersFile file) => SaveLocal(file);
 
     private static void SaveLocal(K8sClustersFile file)
     {

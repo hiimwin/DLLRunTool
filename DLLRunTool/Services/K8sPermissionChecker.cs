@@ -25,14 +25,15 @@ internal static class K8sPermissionChecker
             contextName,
             configuredNamespaces);
 
-        foreach (var ns in hints)
-        {
-            if (await CanIAsync(client, "list", "pods", ns, ct).ConfigureAwait(false))
-            {
-                summary.CanListPodsInNamespaces = true;
-                summary.AccessibleNamespaces.Add(ns);
-            }
-        }
+        var tasks = hints.Select(async ns =>
+            await CanIAsync(client, "list", "pods", ns, ct).ConfigureAwait(false) ? ns : null).ToArray();
+        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+        foreach (var ns in results.Where(n => n != null).Cast<string>())
+            summary.AccessibleNamespaces.Add(ns);
+
+        if (summary.AccessibleNamespaces.Count > 0)
+            summary.CanListPodsInNamespaces = true;
 
         if (summary.HasWorkloadAccess)
         {
@@ -43,11 +44,11 @@ internal static class K8sPermissionChecker
         }
 
         summary.Message =
-            "Tài khoản Azure đã login nhưng không có quyền xem Pods trên cluster này.\n" +
-            "(kubectl cũng báo Forbidden: cannot list resource «pods»)\n\n" +
-            "Đây là giới hạn AKS RBAC — không phải lỗi tool. Lens cũng chỉ hiện chấm xanh «đã kết nối».\n\n" +
-            "Cần admin Azure cấp role, ví dụ:\n" +
-            "• Azure Kubernetes Service RBAC Reader (trong namespace team)\n" +
+            "Không tìm thấy namespace nào có quyền xem Pods (cluster-wide bị từ chối).\n" +
+            "(kubectl: Forbidden khi list pods --all-namespaces)\n\n" +
+            "Nếu Lens vẫn xem được: mở Cài đặt cluster → Accessible Namespaces → thêm namespace (vd. msg-qa) rồi Kết nối lại.\n\n" +
+            "Hoặc cần admin Azure cấp role trong namespace team:\n" +
+            "• Azure Kubernetes Service RBAC Reader\n" +
             "• hoặc Cluster User / Admin\n\n" +
             "Sau khi được cấp quyền: az aks get-credentials … rồi Kết nối lại.";
         return summary;

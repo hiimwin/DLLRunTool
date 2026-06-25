@@ -116,7 +116,22 @@
 
         <section class="view-panel hidden" id="k8sView">
           <div class="panel-card k8s-panel">
-            <div class="k8s-host" id="k8sHost" aria-label="Kubernetes dashboard"></div>
+            <div class="k8s-toolbar hidden" id="k8sToolbar">
+              <div class="k8s-toolbar-text">
+                <span class="k8s-status-dot" aria-hidden="true"></span>
+                <span id="k8sToolbarLabel" data-i18n="k8s.engineRunning">Kubernetes đang chạy</span>
+              </div>
+              <button type="button" class="btn ghost small" id="btnK8sPowerOff" data-i18n="k8s.powerOff">Tắt Kubernetes (giải phóng RAM)</button>
+            </div>
+            <div class="k8s-idle" id="k8sIdle">
+              <div class="k8s-idle-inner">
+                <img src="assets/k8s-mark.svg" alt="" width="48" height="48" class="k8s-idle-icon" />
+                <h3 data-i18n="k8s.idleTitle">Kubernetes chưa bật</h3>
+                <p class="k8s-idle-desc" data-i18n="k8s.idleDesc">Bật khi cần quản lý cluster. Tiết kiệm RAM khi không dùng — tab Services/Handbook vẫn dùng bình thường.</p>
+                <button type="button" class="btn primary" id="btnK8sPowerOn" data-i18n="k8s.powerOn">Bật Kubernetes</button>
+              </div>
+            </div>
+            <div class="k8s-host hidden" id="k8sHost" aria-label="Kubernetes dashboard"></div>
           </div>
         </section>
 
