@@ -6,6 +6,8 @@ publish/
 .vs/
 *.WebView2/
 paths.local.json
+k8s.local.json
+k8s.clusters.json
 appsettings.secrets.json
 ui-state.json
 *.pdb

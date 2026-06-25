@@ -5,10 +5,13 @@ namespace DLLRunTool.Services;
 public sealed class UiState
 {
     public string View { get; set; } = "dashboard";
+    public string RailSection { get; set; } = "services";
+    public string HandbookTab { get; set; } = "architecture";
     public string LastServiceView { get; set; } = "dashboard";
     public string Category { get; set; } = "BE";
     public string PlatformId { get; set; } = "loyalty";
     public string LogFilterServiceId { get; set; } = "";
+    public string Theme { get; set; } = "dark";
 }
 
 public static class UiStateStore

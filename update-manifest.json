@@ -1,6 +1,6 @@
 {
-  "version": "1.2.12",
-  "releasedAt": "2026-06-24",
-  "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1.2.12/Win_Trung-MicroservicesControlPanel.zip",
-  "releaseNotes": "Fix UI hang Redis can chieu cac service khac"
+  "version": "1.3.0",
+  "releasedAt": "2026-06-25",
+  "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1.3.0/Win_Trung-MicroservicesControlPanel.zip",
+  "releaseNotes": "## DLLRunTool v1.3.0\n\n### Kubernetes (moi)\n- Tab **Kubernetes** tren rail trai: quan ly cluster tu kubeconfig tren may (giao dien kieu Lens)\n- Xem Pods, Deployments, Services va tai nguyen khac sau khi chon cluster\n- **Terminal PowerShell nhung**: nhieu tab, keo resize chieu cao\n- **Dang nhap cloud** (az login, get-credentials) ngay trong tool; bam **Quet lai** sau khi cap nhat kubeconfig\n- Chuyen tab Dich vu va Kubernetes **khong ngat** ket noi cluster\n- Cau hinh cluster luu tai k8s.local.json (khong dua vao zip release)\n\n### Giao dien\n- Icon Kubernetes mau vang tren rail (giong Handbook)\n- Console Log bo goc card; banner secrets an khi mo Handbook/Kubernetes\n- Sidebar K8s: chua ket noi hien danh sach cluster; da ket noi hien menu tai nguyen + nut quay lai doi cluster\n\n### Khac\n- Tab **Handbook**: tra cuu kien truc source Loyalty\n- Khoi dong mac dinh vao Dich vu -> Back-End (sua restore tab cu sai)"
 }

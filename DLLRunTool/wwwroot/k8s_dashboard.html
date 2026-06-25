@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kubernetes — Win_Trung</title>
+  <link rel="stylesheet" href="css/app.css" />
+  <link rel="stylesheet" href="css/k8s_dashboard.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+</head>
+<body class="k8s-root" data-theme="dark">
+  <div id="k8sApp" class="k8s-screen k8s-dash">
+    <div class="k8s-dash-body">
+      <aside class="k8s-nav">
+        <div class="k8s-nav-header" id="navHeader">
+          <button type="button" id="btnBackClusters" class="k8s-nav-back hidden" title="Đổi cluster"><i class="fa-solid fa-chevron-left"></i></button>
+          <button type="button" id="clusterBadge" class="k8s-nav-header-cluster hidden" title="Chuột phải: menu cluster · Click: Settings">
+            <span id="clusterDot" class="k8s-cluster-dot yellow"></span>
+            <span id="clusterBadgeText" class="k8s-cluster-label">—</span>
+          </button>
+          <span id="navHeaderLabel">Clusters</span>
+        </div>
+
+        <div id="kubePicker" class="k8s-sidebar-pane">
+          <div class="k8s-kube-group open" id="kubeGroup">
+            <div class="k8s-kube-list" id="sidebarClusterList"></div>
+            <div class="k8s-kube-actions">
+              <button type="button" id="btnRefreshClusters" class="k8s-btn sm"><i class="fa-solid fa-rotate"></i> Quét lại</button>
+              <button type="button" id="btnBrowseKube" class="k8s-btn sm ghost">Import</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="connectedNav" class="k8s-sidebar-pane k8s-connected-nav hidden">
+          <div class="k8s-nav-scroll" id="navTree">
+          <button type="button" class="k8s-nav-item" data-view="overview"><i class="fa-solid fa-chart-pie icon"></i> Overview</button>
+          <button type="button" class="k8s-nav-item" data-view="applications"><i class="fa-solid fa-grid-2 icon"></i> Applications</button>
+          <button type="button" class="k8s-nav-item" data-view="nodes"><i class="fa-solid fa-server icon"></i> Nodes</button>
+
+          <div class="k8s-nav-group open" data-group="workloads">
+            <button type="button" class="k8s-nav-group-toggle"><i class="fa-solid fa-cubes icon"></i> Workloads <i class="fa-solid fa-chevron-right chev"></i></button>
+            <div class="k8s-nav-group-items">
+              <button type="button" class="k8s-nav-item child active" data-view="pods"><i class="fa-solid fa-cube icon"></i> Pods</button>
+              <button type="button" class="k8s-nav-item child" data-view="deployments"><i class="fa-solid fa-layer-group icon"></i> Deployments</button>
+              <button type="button" class="k8s-nav-item child" data-view="daemonsets"><i class="fa-solid fa-network-wired icon"></i> Daemon Sets</button>
+              <button type="button" class="k8s-nav-item child" data-view="statefulsets"><i class="fa-solid fa-database icon"></i> Stateful Sets</button>
+              <button type="button" class="k8s-nav-item child" data-view="jobs"><i class="fa-solid fa-briefcase icon"></i> Jobs</button>
+              <button type="button" class="k8s-nav-item child" data-view="cronjobs"><i class="fa-solid fa-clock icon"></i> CronJobs</button>
+            </div>
+          </div>
+
+          <div class="k8s-nav-group" data-group="config">
+            <button type="button" class="k8s-nav-group-toggle"><i class="fa-solid fa-sliders icon"></i> Config <i class="fa-solid fa-chevron-right chev"></i></button>
+            <div class="k8s-nav-group-items">
+              <button type="button" class="k8s-nav-item child" data-view="configmaps"><i class="fa-solid fa-file-lines icon"></i> Config Maps</button>
+              <button type="button" class="k8s-nav-item child" data-view="secrets"><i class="fa-solid fa-key icon"></i> Secrets</button>
+            </div>
+          </div>
+
+          <div class="k8s-nav-group" data-group="network">
+            <button type="button" class="k8s-nav-group-toggle"><i class="fa-solid fa-globe icon"></i> Network <i class="fa-solid fa-chevron-right chev"></i></button>
+            <div class="k8s-nav-group-items">
+              <button type="button" class="k8s-nav-item child" data-view="services"><i class="fa-solid fa-share-nodes icon"></i> Services</button>
+              <button type="button" class="k8s-nav-item child" data-view="ingresses"><i class="fa-solid fa-door-open icon"></i> Ingresses</button>
+              <button type="button" class="k8s-nav-item child" data-view="portforwarding"><i class="fa-solid fa-arrow-right-arrow-left icon"></i> Port Forwarding</button>
+            </div>
+          </div>
+
+          <div class="k8s-nav-group" data-group="storage">
+            <button type="button" class="k8s-nav-group-toggle"><i class="fa-solid fa-hard-drive icon"></i> Storage <i class="fa-solid fa-chevron-right chev"></i></button>
+            <div class="k8s-nav-group-items">
+              <button type="button" class="k8s-nav-item child" data-view="persistentvolumeclaims"><i class="fa-solid fa-box icon"></i> PVCs</button>
+              <button type="button" class="k8s-nav-item child" data-view="persistentvolumes"><i class="fa-solid fa-compact-disc icon"></i> PVs</button>
+              <button type="button" class="k8s-nav-item child" data-view="storageclasses"><i class="fa-solid fa-folder-tree icon"></i> Storage Classes</button>
+            </div>
+          </div>
+
+          <button type="button" class="k8s-nav-item" data-view="namespaces"><i class="fa-solid fa-tags icon"></i> Namespaces</button>
+          <button type="button" class="k8s-nav-item" data-view="events"><i class="fa-solid fa-bell icon"></i> Events</button>
+          <button type="button" class="k8s-nav-item" data-view="helm"><i class="fa-solid fa-ship icon"></i> Helm</button>
+
+          <div class="k8s-nav-group" data-group="access">
+            <button type="button" class="k8s-nav-group-toggle"><i class="fa-solid fa-shield-halved icon"></i> Access Control <i class="fa-solid fa-chevron-right chev"></i></button>
+            <div class="k8s-nav-group-items">
+              <button type="button" class="k8s-nav-item child" data-view="serviceaccounts"><i class="fa-solid fa-user-gear icon"></i> Service Accounts</button>
+              <button type="button" class="k8s-nav-item child" data-view="roles"><i class="fa-solid fa-id-badge icon"></i> Roles</button>
+              <button type="button" class="k8s-nav-item child" data-view="rolebindings"><i class="fa-solid fa-link icon"></i> Role Bindings</button>
+              <button type="button" class="k8s-nav-item child" data-view="clusterroles"><i class="fa-solid fa-id-card icon"></i> Cluster Roles</button>
+              <button type="button" class="k8s-nav-item child" data-view="clusterrolebindings"><i class="fa-solid fa-link icon"></i> Cluster Role Bindings</button>
+            </div>
+          </div>
+
+          <button type="button" class="k8s-nav-item" data-view="customresources"><i class="fa-solid fa-puzzle-piece icon"></i> Custom Resources</button>
+          </div>
+        </div>
+
+        <div class="k8s-nav-footer">
+          <button type="button" id="btnRefresh" class="k8s-btn primary sm block hidden" data-when-connected><i class="fa-solid fa-rotate"></i> Refresh</button>
+          <button type="button" id="btnOpenTerminal" class="k8s-btn sm block" data-when-disconnected><i class="fa-solid fa-terminal"></i> Đăng nhập cloud</button>
+        </div>
+      </aside>
+
+      <main class="k8s-main">
+        <div id="welcomePanel" class="k8s-welcome">
+          <div class="k8s-welcome-inner">
+            <div class="icon-wrap"><i class="fa-solid fa-dharmachakra"></i></div>
+            <h1>Chọn cluster</h1>
+            <p>Bấm cluster trong danh sách bên trái để kết nối.</p>
+            <p id="configHint" class="hint mono"></p>
+            <p id="connectError" class="k8s-error hidden"></p>
+          </div>
+        </div>
+
+        <div id="connectedMain" class="k8s-connected-main hidden">
+        <header class="k8s-toolbar">
+          <h1 id="viewTitle">Pods</h1>
+          <select id="nsFilter" class="hidden-ns-filter">
+            <option value="">All namespaces</option>
+          </select>
+          <input id="podSearch" type="search" placeholder="Search…" />
+          <span id="statusLine" class="count">0 items</span>
+        </header>
+        <div class="k8s-content">
+          <div id="nsBar" class="k8s-banner warn hidden">
+            <p style="margin-bottom:8px;font-size:0.75rem;">Tùy chọn namespace (phân cách dấu phẩy) nếu RBAC hạn chế:</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <input id="nsInput" type="text" placeholder="vd: demo-k8s, default" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-app);color:var(--text-primary);font-size:0.78rem;" />
+              <button type="button" id="btnSaveNs" class="k8s-btn sm primary">Áp dụng</button>
+            </div>
+          </div>
+          <div id="infoBanner" class="k8s-banner hidden"></div>
+          <div id="errorBanner" class="k8s-banner err hidden"></div>
+          <div id="overviewPanel" class="hidden"></div>
+          <div id="tablePanel" class="k8s-table-wrap">
+            <table class="k8s-table">
+              <thead id="tableHead"></thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+          <p id="emptyState" class="k8s-empty hidden">Item list is empty</p>
+        </div>
+        </div>
+      </main>
+    </div>
+
+    <div id="bottomPanel" class="k8s-bottom hidden">
+      <div class="k8s-term-resize-handle" id="terminalResizeHandle" title="Kéo để thay đổi chiều cao terminal"></div>
+      <div class="k8s-term-tabs-wrap">
+        <div class="k8s-term-tabs" id="terminalTabs"></div>
+        <div class="k8s-term-tabs-actions">
+          <button type="button" id="btnAddTerminal" class="k8s-btn sm ghost" title="Terminal mới"><i class="fa-solid fa-plus"></i></button>
+          <button type="button" id="btnToggleBottom" class="k8s-btn sm ghost" title="Thu gọn">▼</button>
+        </div>
+      </div>
+      <div class="k8s-term-search-row">
+        <input type="search" id="terminalSearch" class="k8s-term-search" placeholder="Search in Terminal…" />
+      </div>
+      <div id="terminalContext" class="k8s-term-context hidden"></div>
+      <div id="terminalPanels" class="k8s-term-panels"></div>
+    </div>
+  </div>
+
+  <div id="clusterCtxMenu" class="k8s-ctx-menu hidden" role="menu">
+    <button type="button" data-act="disconnect">Disconnect</button>
+    <button type="button" data-act="settings">Show Cluster Settings</button>
+    <button type="button" data-act="remove">Remove from kubeconfig</button>
+    <button type="button" data-act="hotbar">Add to hotbar</button>
+    <div class="k8s-ctx-submenu">
+      <button type="button" class="has-sub" data-act="appearance">Appearance <i class="fa-solid fa-chevron-right"></i></button>
+      <div class="k8s-ctx-sub hidden" id="appearanceSub">
+        <button type="button" data-color="green"><span class="k8s-cluster-dot green"></span> Green</button>
+        <button type="button" data-color="yellow"><span class="k8s-cluster-dot yellow"></span> Yellow</button>
+        <button type="button" data-color="red"><span class="k8s-cluster-dot red"></span> Red</button>
+        <button type="button" data-color="blue"><span class="k8s-cluster-dot blue"></span> Blue</button>
+        <button type="button" data-color="grey"><span class="k8s-cluster-dot grey"></span> Grey</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="settingsModal" class="k8s-settings hidden">
+    <div class="k8s-settings-card">
+      <header class="k8s-settings-top">
+        <h2>Cluster Settings — <span id="settingsTitle">Cluster</span></h2>
+        <button type="button" id="settingsClose" class="k8s-btn sm ghost"><i class="fa-solid fa-xmark"></i></button>
+      </header>
+      <div class="k8s-settings-body">
+        <nav class="k8s-settings-nav">
+          <button type="button" class="active" data-tab="general">General</button>
+          <button type="button" data-tab="namespaces">Namespaces</button>
+        </nav>
+        <div class="k8s-settings-panels">
+          <div id="settingsGeneral" class="k8s-settings-panel">
+            <dl class="k8s-settings-dl">
+              <dt>Context</dt><dd id="settingsContext">—</dd>
+              <dt>Kubeconfig</dt><dd id="settingsKube" class="mono">—</dd>
+            </dl>
+          </div>
+          <div id="settingsNamespaces" class="k8s-settings-panel hidden">
+            <h3>Accessible Namespaces</h3>
+            <p class="k8s-settings-hint">Hữu ích khi RBAC không cho phép list namespaces cluster-wide — giống Lens.</p>
+            <div class="k8s-ns-add">
+              <input id="settingsNsInput" type="text" placeholder="Add new namespace…" />
+              <button type="button" id="settingsNsAdd" class="k8s-btn sm primary">Add</button>
+            </div>
+            <ul id="settingsNsList" class="k8s-ns-list"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal" class="k8s-modal hidden">
+    <div class="k8s-modal-card">
+      <div class="k8s-modal-head">
+        <h2 id="modalTitle">Modal</h2>
+        <div style="display:flex;gap:6px;">
+          <button type="button" id="modalSave" class="k8s-btn sm primary hidden">Apply YAML</button>
+          <button type="button" id="modalClose" class="k8s-btn sm ghost"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
+      <textarea id="modalContent" class="terminal" readonly></textarea>
+    </div>
+  </div>
+  <div id="toast" class="k8s-toast hidden"></div>
+
+  <script>
+    const VIEW_TITLES = {
+      overview: "Overview", applications: "Applications", nodes: "Nodes",
+      pods: "Pods", deployments: "Deployments", daemonsets: "Daemon Sets",
+      statefulsets: "Stateful Sets", jobs: "Jobs", cronjobs: "CronJobs",
+      configmaps: "Config Maps", secrets: "Secrets", services: "Services",
+      ingresses: "Ingresses", portforwarding: "Port Forwarding",
+      persistentvolumeclaims: "Persistent Volume Claims", persistentvolumes: "Persistent Volumes",
+      storageclasses: "Storage Classes", namespaces: "Namespaces", events: "Events",
+      helm: "Helm", serviceaccounts: "Service Accounts", roles: "Roles",
+      rolebindings: "Role Bindings", clusterroles: "Cluster Roles",
+      clusterrolebindings: "Cluster Role Bindings", customresources: "Custom Resources"
+    };
+
+    const LIST_VIEWS = new Set([
+      "pods","nodes","deployments","statefulsets","daemonsets","jobs","cronjobs",
+      "configmaps","secrets","services","ingresses","persistentvolumeclaims",
+      "persistentvolumes","storageclasses","namespaces","events","serviceaccounts",
+      "roles","rolebindings","clusterroles","clusterrolebindings","customresources",
+      "applications","helm","portforwarding"
+    ]);
+
+    const NAMESPACED_VIEWS = new Set([
+      "pods","deployments","statefulsets","daemonsets","jobs","cronjobs",
+      "configmaps","secrets","services","ingresses","persistentvolumeclaims",
+      "serviceaccounts","roles","rolebindings","events"
+    ]);
+
+    const state = {
+      connected: false, view: "pods", rows: [], allRows: [],
+      clusters: [], selectedCluster: null, activeContext: "", activeClusterId: "",
+      activeClusterName: "", clusterColor: "yellow",
+      namespaceList: [], accessibleNamespaces: [], nsFilter: "", search: "", yamlEditable: false,
+      terminalOpen: false, sidebarMode: "pick",
+      terminal: { tabs: [], activeId: null, search: "" }
+    };
+
+    function applyTheme(theme) {
+      const t = theme === "light" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", t);
+      document.body.setAttribute("data-theme", t);
+      try { localStorage.setItem("mcp-theme", t); } catch { /* ignore */ }
+    }
+
+    function send(action, extra = {}) {
+      const msg = { action, ...extra };
+      if (window.chrome?.webview) window.chrome.webview.postMessage(msg);
+      else console.debug("[K8s]", msg);
+    }
+
+    function escapeHtml(t) {
+      return String(t ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    function statusBadge(status) {
+      const s = (status || "").toLowerCase();
+      let cls = "neutral";
+      if (s === "running" || s === "ready" || s === "active" || s === "complete" || s === "bound") cls = "ok";
+      else if (s.includes("fail") || s.includes("error") || s === "crashloopbackoff") cls = "bad";
+      else if (s === "pending" || s === "suspended") cls = "pending";
+      return `<span class="k8s-badge ${cls}">${escapeHtml(status)}</span>`;
+    }
+
+    function applyFilters() {
+      let list = state.allRows || [];
+      if (state.nsFilter && NAMESPACED_VIEWS.has(state.view)) {
+        list = list.filter((r) => (r.namespace || "") === state.nsFilter);
+      }
+      const q = (state.search || "").trim().toLowerCase();
+      if (q) {
+        list = list.filter((r) =>
+          (r.name || "").toLowerCase().includes(q) ||
+          (r.namespace || "").toLowerCase().includes(q) ||
+          (r.detail || "").toLowerCase().includes(q)
+        );
+      }
+      state.rows = list;
+    }
+
+    function fillNamespaceFilter(list) {
+      const sel = document.getElementById("nsFilter");
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">All namespaces</option>';
+      (list || []).forEach((ns) => {
+        const opt = document.createElement("option");
+        opt.value = ns; opt.textContent = ns;
+        sel.appendChild(opt);
+      });
+      if (cur && [...sel.options].some((o) => o.value === cur)) sel.value = cur;
+    }
+
+    function updateToolbarForView() {
+      const nsFilter = document.getElementById("nsFilter");
+      const search = document.getElementById("podSearch");
+      const showNs = NAMESPACED_VIEWS.has(state.view);
+      nsFilter.style.display = showNs ? "" : "none";
+      search.style.display = state.view === "overview" ? "none" : "";
+    }
+
+    function terminalTitle(index) {
+      return index === 0 ? "Terminal" : `Terminal (${index + 1})`;
+    }
+
+    function tabPrompt(tab) {
+      return `PS ${tab.cwd || "~"}>`;
+    }
+
+    function focusTerminalInput(sessionId) {
+      const input = document.querySelector(`.k8s-term-panel[data-session-id="${sessionId}"] .k8s-term-input`);
+      input?.focus();
+    }
+
+    function refreshTerminalPanel(tab) {
+      const panel = document.querySelector(`.k8s-term-panel[data-session-id="${tab.id}"]`);
+      if (!panel) return;
+      const out = panel.querySelector(".k8s-term-out");
+      const promptEl = panel.querySelector(".k8s-term-prompt");
+      const input = panel.querySelector(".k8s-term-input");
+      if (promptEl) promptEl.textContent = tabPrompt(tab);
+      if (input) {
+        input.disabled = !!tab.exited;
+        input.placeholder = tab.exited ? "(đã đóng)" : "";
+      }
+      if (!out) return;
+      const q = (state.terminal.search || "").trim();
+      if (!q) {
+        out.textContent = tab.output || "";
+      } else {
+        const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+        out.innerHTML = escapeHtml(tab.output || "").replace(re, (m) => `<mark class="k8s-term-hit">${m}</mark>`);
+      }
+      const scroll = panel.querySelector(".k8s-term-scroll");
+      if (scroll) scroll.scrollTop = scroll.scrollHeight;
+    }
+
+    function getActiveTerminalTab() {
+      return state.terminal.tabs.find((t) => t.id === state.terminal.activeId) || null;
+    }
+
+    function renderTerminalTabs() {
+      const tabsEl = document.getElementById("terminalTabs");
+      const panelsEl = document.getElementById("terminalPanels");
+      if (!tabsEl || !panelsEl) return;
+
+      tabsEl.innerHTML = "";
+      panelsEl.innerHTML = "";
+
+      state.terminal.tabs.forEach((tab, index) => {
+        const isActive = tab.id === state.terminal.activeId;
+        const tabBtn = document.createElement("button");
+        tabBtn.type = "button";
+        tabBtn.className = "k8s-term-tab" + (isActive ? " active" : "") + (tab.exited ? " exited" : "");
+        tabBtn.dataset.sessionId = tab.id;
+        tabBtn.innerHTML = `<i class="fa-solid fa-terminal"></i><span>${escapeHtml(terminalTitle(index))}</span>`;
+        tabBtn.onclick = () => activateTerminalTab(tab.id);
+
+        const closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.className = "k8s-term-tab-close";
+        closeBtn.title = "Đóng tab";
+        closeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        closeBtn.onclick = (e) => { e.stopPropagation(); closeTerminalTab(tab.id); };
+        tabBtn.appendChild(closeBtn);
+        tabsEl.appendChild(tabBtn);
+
+        const panel = document.createElement("div");
+        panel.className = "k8s-term-panel" + (isActive ? "" : " hidden");
+        panel.dataset.sessionId = tab.id;
+
+        const scroll = document.createElement("div");
+        scroll.className = "k8s-term-scroll";
+        const out = document.createElement("pre");
+        out.className = "k8s-term-out terminal";
+        scroll.appendChild(out);
+
+        const inputLine = document.createElement("div");
+        inputLine.className = "k8s-term-input-line";
+        const prompt = document.createElement("span");
+        prompt.className = "k8s-term-prompt";
+        prompt.textContent = tabPrompt(tab);
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "k8s-term-input";
+        input.spellcheck = false;
+        input.autocomplete = "off";
+        input.value = tab.draft || "";
+        input.disabled = !!tab.exited;
+        input.oninput = () => { tab.draft = input.value; };
+        input.onkeydown = (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            submitTerminalLine(tab, input.value);
+            input.value = "";
+            tab.draft = "";
+          }
+        };
+        inputLine.append(prompt, input);
+        panel.append(scroll, inputLine);
+        panelsEl.appendChild(panel);
+        refreshTerminalPanel(tab);
+      });
+
+      updateTerminalContext();
+      if (state.terminal.activeId) focusTerminalInput(state.terminal.activeId);
+    }
+
+    function updateTerminalContext() {
+      const ctx = document.getElementById("terminalContext");
+      if (!ctx) return;
+      if (state.connected && state.terminal.tabs.length) {
+        ctx.textContent = `Kubernetes cluster ${state.activeClusterName} in context ${state.activeContext || "default"}.`;
+        ctx.classList.remove("hidden");
+      } else {
+        ctx.classList.add("hidden");
+        ctx.textContent = "";
+      }
+    }
+
+    function activateTerminalTab(sessionId) {
+      state.terminal.activeId = sessionId;
+      document.querySelectorAll(".k8s-term-panel").forEach((p) => {
+        p.classList.toggle("hidden", p.dataset.sessionId !== sessionId);
+      });
+      document.querySelectorAll(".k8s-term-tab").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.sessionId === sessionId);
+      });
+      focusTerminalInput(sessionId);
+    }
+
+    function closeTerminalTab(sessionId, skipNotify = false) {
+      if (!sessionId) return;
+      if (!skipNotify) send("closeTerminal", { sessionId });
+      state.terminal.tabs = state.terminal.tabs.filter((t) => t.id !== sessionId);
+      if (state.terminal.activeId === sessionId) {
+        state.terminal.activeId = state.terminal.tabs[state.terminal.tabs.length - 1]?.id || null;
+      }
+      if (!state.terminal.tabs.length) {
+        state.terminalOpen = false;
+        if (!state.connected) document.getElementById("bottomPanel")?.classList.add("hidden");
+      }
+      renderTerminalTabs();
+    }
+
+    function addTerminalTab(sessionId, message, cwd) {
+      const tab = {
+        id: sessionId,
+        output: message ? message + "\n" : "",
+        cwd: cwd || "~",
+        draft: "",
+        exited: false
+      };
+      state.terminal.tabs.push(tab);
+      state.terminal.activeId = sessionId;
+      renderTerminalTabs();
+    }
+
+    function submitTerminalLine(tab, line) {
+      if (!tab || tab.exited) return;
+      const cmd = (line ?? "").trimEnd();
+      if (!cmd) return;
+      tab.output += (tab.output ? "\n" : "") + tabPrompt(tab) + " " + cmd;
+      refreshTerminalPanel(tab);
+      send("terminalInput", { sessionId: tab.id, line: cmd });
+    }
+
+    function appendTerminalOutput(sessionId, text) {
+      if (!text) return;
+      const tab = state.terminal.tabs.find((t) => t.id === sessionId);
+      if (!tab) return;
+      tab.output += text;
+      refreshTerminalPanel(tab);
+    }
+
+    function applyTerminalSearch() {
+      const tab = getActiveTerminalTab();
+      if (tab) refreshTerminalPanel(tab);
+    }
+
+    function createTerminalSession() {
+      openBottomTerminal();
+      send("createTerminal");
+    }
+
+    function appendTerminal(line) {
+      const tab = getActiveTerminalTab();
+      if (!tab) return;
+      const ts = new Date().toLocaleTimeString();
+      appendTerminalOutput(tab.id, `[${ts}] ${line}\n`);
+    }
+
+    function applyTerminalHeight(px) {
+      const panel = document.getElementById("bottomPanel");
+      if (!panel || panel.classList.contains("collapsed")) return;
+      const height = Math.max(100, Math.min(window.innerHeight * 0.55, px));
+      panel.style.setProperty("--k8s-term-height", `${height}px`);
+      localStorage.setItem("mcp-k8s-term-height", String(Math.round(height)));
+    }
+
+    function initTerminalResize() {
+      const saved = parseInt(localStorage.getItem("mcp-k8s-term-height") || "240", 10);
+      if (!Number.isNaN(saved)) applyTerminalHeight(saved);
+
+      const handle = document.getElementById("terminalResizeHandle");
+      const panel = document.getElementById("bottomPanel");
+      if (!handle || !panel) return;
+
+      let dragging = false;
+      let startY = 0;
+      let startHeight = 0;
+
+      handle.addEventListener("mousedown", (e) => {
+        if (panel.classList.contains("collapsed")) return;
+        dragging = true;
+        startY = e.clientY;
+        startHeight = panel.getBoundingClientRect().height;
+        panel.classList.add("is-resizing");
+        e.preventDefault();
+      });
+
+      window.addEventListener("mousemove", (e) => {
+        if (!dragging) return;
+        applyTerminalHeight(startHeight + (startY - e.clientY));
+      });
+
+      window.addEventListener("mouseup", () => {
+        if (!dragging) return;
+        dragging = false;
+        panel.classList.remove("is-resizing");
+      });
+    }
+
+    function openBottomTerminal() {
+      const panel = document.getElementById("bottomPanel");
+      panel?.classList.remove("hidden", "collapsed");
+      panel?.classList.add("open");
+      const saved = parseInt(localStorage.getItem("mcp-k8s-term-height") || "240", 10);
+      if (!Number.isNaN(saved)) applyTerminalHeight(saved);
+      const toggle = document.getElementById("btnToggleBottom");
+      if (toggle) toggle.textContent = "▼";
+      state.terminalOpen = true;
+      if (state.terminal.activeId) focusTerminalInput(state.terminal.activeId);
+    }
+
+    function setClusterDot(color) {
+      const dot = document.getElementById("clusterDot");
+      if (!dot) return;
+      dot.className = "k8s-cluster-dot " + (color || "yellow");
+      state.clusterColor = color || "yellow";
+    }
+
+    function updateClusterBadge(name, context) {
+      const label = document.getElementById("clusterBadgeText");
+      if (label) label.textContent = `${name} · ${context || "default"}`;
+    }
+
+    function hideCtxMenu() {
+      document.getElementById("clusterCtxMenu")?.classList.add("hidden");
+      document.getElementById("appearanceSub")?.classList.add("hidden");
+    }
+
+    function showCtxMenu(x, y) {
+      const menu = document.getElementById("clusterCtxMenu");
+      if (!menu) return;
+      menu.classList.remove("hidden");
+      menu.style.left = `${x}px`;
+      menu.style.top = `${y}px`;
+      const hotbarBtn = menu.querySelector('[data-act="hotbar"]');
+      if (hotbarBtn) hotbarBtn.textContent = state.onHotbar ? "Remove from hotbar" : "Add to hotbar";
+    }
+
+    function renderSettingsNamespaces() {
+      const list = document.getElementById("settingsNsList");
+      if (!list) return;
+      list.innerHTML = "";
+      (state.accessibleNamespaces || []).forEach((ns) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span>${escapeHtml(ns)}</span><button type="button" class="k8s-icon-btn del" title="Remove"><i class="fa-solid fa-trash"></i></button>`;
+        li.querySelector("button").onclick = () => {
+          state.accessibleNamespaces = state.accessibleNamespaces.filter((n) => n !== ns);
+          renderSettingsNamespaces();
+          persistAccessibleNamespaces();
+        };
+        list.appendChild(li);
+      });
+    }
+
+    function persistAccessibleNamespaces() {
+      send("saveNamespaces", {
+        context: state.activeContext,
+        clusterId: state.activeClusterId,
+        namespaces: state.accessibleNamespaces
+      });
+      document.getElementById("nsInput").value = state.accessibleNamespaces.join(", ");
+      if (state.accessibleNamespaces.length) {
+        fillNamespaceFilter(state.accessibleNamespaces);
+        document.getElementById("nsBar")?.classList.remove("hidden");
+      }
+    }
+
+    function openClusterSettings(tab = "namespaces") {
+      send("getClusterSettings", { clusterId: state.activeClusterId, context: state.activeContext });
+      document.querySelectorAll(".k8s-settings-nav button").forEach((b) => {
+        b.classList.toggle("active", b.dataset.tab === tab);
+      });
+      document.getElementById("settingsGeneral")?.classList.toggle("hidden", tab !== "general");
+      document.getElementById("settingsNamespaces")?.classList.toggle("hidden", tab !== "namespaces");
+      document.getElementById("settingsModal")?.classList.remove("hidden");
+    }
+
+    function onClusterSettings(payload) {
+      if (!payload) return;
+      state.activeClusterId = payload.clusterId || state.activeClusterId;
+      state.activeClusterName = payload.clusterName || state.activeClusterName;
+      state.accessibleNamespaces = [...(payload.namespaces || [])];
+      state.onHotbar = !!payload.onHotbar;
+      setClusterDot(payload.color);
+      document.getElementById("settingsTitle").textContent = payload.clusterName || payload.context || "Cluster";
+      document.getElementById("settingsContext").textContent = payload.context || "—";
+      document.getElementById("settingsKube").textContent = payload.kubeConfigPath || "—";
+      renderSettingsNamespaces();
+    }
+
+    function updateSidebar() {
+      const showPicker = !state.connected || state.sidebarMode === "pick";
+      const showClusterNav = state.connected && state.sidebarMode === "cluster";
+
+      document.getElementById("kubePicker")?.classList.toggle("hidden", !showPicker);
+      document.getElementById("connectedNav")?.classList.toggle("hidden", !showClusterNav);
+      document.getElementById("btnBackClusters")?.classList.toggle("hidden", !state.connected || showPicker);
+      document.getElementById("clusterBadge")?.classList.toggle("hidden", !showClusterNav);
+      document.getElementById("navHeaderLabel")?.classList.toggle("hidden", showClusterNav);
+
+      document.querySelectorAll("[data-when-connected]").forEach((el) => {
+        el.classList.toggle("hidden", !state.connected);
+      });
+      document.querySelectorAll("[data-when-disconnected]").forEach((el) => {
+        el.classList.toggle("hidden", state.connected);
+      });
+    }
+
+    function showClusterPicker() {
+      state.sidebarMode = "pick";
+      updateSidebar();
+      renderSidebarClusterList();
+    }
+
+    function showConnectScreen() {
+      state.connected = false;
+      state.sidebarMode = "pick";
+      document.getElementById("welcomePanel")?.classList.remove("hidden");
+      document.getElementById("connectedMain")?.classList.add("hidden");
+      if (!state.terminalOpen) document.getElementById("bottomPanel")?.classList.add("hidden");
+      updateSidebar();
+    }
+
+    function showDashboard(clusterName, context, opts = {}) {
+      state.connected = true;
+      state.sidebarMode = "cluster";
+      state.activeContext = context || "";
+      state.activeClusterId = opts.clusterId || state.activeClusterId || "";
+      state.activeClusterName = clusterName || state.activeClusterName || "Cluster";
+      document.getElementById("welcomePanel")?.classList.add("hidden");
+      document.getElementById("connectedMain")?.classList.remove("hidden");
+      document.getElementById("bottomPanel")?.classList.remove("hidden");
+      updateSidebar();
+      if (state.terminalOpen) {
+        document.getElementById("bottomPanel")?.classList.add("open");
+      }
+      updateClusterBadge(state.activeClusterName, state.activeContext);
+      setClusterDot(opts.color || state.clusterColor);
+      updateTerminalContext();
+      ["connectError","errorBanner","infoBanner"].forEach((id) => {
+        document.getElementById(id).classList.add("hidden");
+      });
+      if (opts.theme) applyTheme(opts.theme);
+      state.accessibleNamespaces = [...(opts.namespaces || [])];
+      if (opts.namespaceList?.length) {
+        state.namespaceList = opts.namespaceList;
+        fillNamespaceFilter(opts.namespaceList);
+      } else if (state.accessibleNamespaces.length) {
+        fillNamespaceFilter(state.accessibleNamespaces);
+      }
+      const nsBar = document.getElementById("nsBar");
+      if (opts.limitedRbac || opts.showNamespaceBar || state.accessibleNamespaces.length) {
+        nsBar.classList.remove("hidden");
+        if (state.accessibleNamespaces.length) document.getElementById("nsInput").value = state.accessibleNamespaces.join(", ");
+      } else nsBar.classList.add("hidden");
+    }
+
+    function renderOverview(data) {
+      document.getElementById("overviewPanel").classList.remove("hidden");
+      document.getElementById("tablePanel").classList.add("hidden");
+      document.getElementById("emptyState").classList.add("hidden");
+      document.getElementById("overviewPanel").innerHTML = `
+        <div class="k8s-overview">
+          <div class="k8s-stat"><div class="val">${data.podCount ?? 0}</div><div class="lbl">Pods</div></div>
+          <div class="k8s-stat"><div class="val">${data.nodeCount ?? 0}</div><div class="lbl">Nodes</div></div>
+          <div class="k8s-stat"><div class="val">${data.deploymentCount ?? 0}</div><div class="lbl">Deployments</div></div>
+          <div class="k8s-stat"><div class="val">${data.namespaceCount ?? 0}</div><div class="lbl">Namespaces</div></div>
+        </div>
+        <p class="k8s-overview-meta">Cluster: <strong>${escapeHtml(data.clusterName)}</strong> · Context: <code>${escapeHtml(data.context)}</code> · K8s v${escapeHtml(data.version || "?")}</p>`;
+    }
+
+    function renderTable() {
+      const overview = document.getElementById("overviewPanel");
+      const tablePanel = document.getElementById("tablePanel");
+      const empty = document.getElementById("emptyState");
+      const head = document.getElementById("tableHead");
+      const body = document.getElementById("tableBody");
+
+      if (state.view === "overview") return;
+
+      overview.classList.add("hidden");
+      tablePanel.classList.remove("hidden");
+      body.innerHTML = "";
+
+      if (!state.rows?.length) {
+        empty.classList.remove("hidden");
+        head.innerHTML = "";
+        return;
+      }
+      empty.classList.add("hidden");
+
+      const hasNs = state.rows.some((r) => r.namespace);
+      const hasDetail = state.rows.some((r) => r.detail);
+      const isPods = state.view === "pods";
+
+      let headHtml = "<tr><th>Name</th>";
+      if (hasNs) headHtml += "<th>Namespace</th>";
+      headHtml += "<th>Status</th>";
+      if (isPods) headHtml += "<th>Restarts</th>";
+      else if (hasDetail) headHtml += "<th>Detail</th>";
+      headHtml += "<th>Age</th>";
+      if (isPods) headHtml += '<th class="actions">Actions</th>';
+      headHtml += "</tr>";
+      head.innerHTML = headHtml;
+
+      state.rows.forEach((r) => {
+        const tr = document.createElement("tr");
+        let html = `<td class="mono">${escapeHtml(r.name)}</td>`;
+        if (hasNs) html += `<td class="muted">${escapeHtml(r.namespace)}</td>`;
+        html += `<td>${statusBadge(r.status)}</td>`;
+        if (isPods) html += `<td>${r.restartCount ?? 0}</td>`;
+        else if (hasDetail) html += `<td class="muted">${escapeHtml(r.detail)}</td>`;
+        html += `<td class="muted">${escapeHtml(r.age)}</td>`;
+        if (isPods) {
+          html += `<td class="actions">
+            <button class="k8s-icon-btn shell" title="Shell" data-act="shell" data-name="${escapeHtml(r.name)}" data-ns="${escapeHtml(r.namespace)}" data-container="${escapeHtml(r.container || "")}"><i class="fa-solid fa-terminal"></i></button>
+            <button class="k8s-icon-btn logs" title="Logs" data-act="logs" data-name="${escapeHtml(r.name)}" data-ns="${escapeHtml(r.namespace)}"><i class="fa-solid fa-eye"></i></button>
+            <button class="k8s-icon-btn yaml" title="YAML" data-act="yaml" data-name="${escapeHtml(r.name)}" data-ns="${escapeHtml(r.namespace)}"><i class="fa-solid fa-pen"></i></button>
+            <button class="k8s-icon-btn del" title="Delete" data-act="delete" data-name="${escapeHtml(r.name)}" data-ns="${escapeHtml(r.namespace)}"><i class="fa-solid fa-trash"></i></button>
+          </td>`;
+        }
+        tr.innerHTML = html;
+        body.appendChild(tr);
+      });
+
+      body.querySelectorAll("button[data-act]").forEach((btn) => {
+        btn.onclick = () => {
+          const { name, ns, act, container } = btn.dataset;
+          if (act === "logs") send("getLogs", { podName: name, namespace: ns });
+          else if (act === "yaml") send("getYaml", { podName: name, namespace: ns });
+          else if (act === "shell") send("podShell", { podName: name, namespace: ns, container: container || "" });
+          else if (act === "delete" && confirm(`Xóa pod ${ns}/${name}?`)) send("deletePod", { podName: name, namespace: ns });
+        };
+      });
+    }
+
+    function onListReceived(view, payload) {
+      state.view = view;
+      state.allRows = payload || [];
+      applyFilters();
+      document.querySelectorAll(".k8s-nav-item[data-view]").forEach((el) => {
+        el.classList.toggle("active", el.dataset.view === view);
+      });
+      document.getElementById("viewTitle").textContent = VIEW_TITLES[view] || view;
+      updateToolbarForView();
+      renderTable();
+      document.getElementById("statusLine").textContent = `${state.rows.length} items`;
+    }
+
+    function setView(view) {
+      state.view = view;
+      document.querySelectorAll(".k8s-nav-item[data-view]").forEach((el) => {
+        el.classList.toggle("active", el.dataset.view === view);
+      });
+      document.getElementById("viewTitle").textContent = VIEW_TITLES[view] || view;
+      updateToolbarForView();
+      if (view === "overview") {
+        document.getElementById("overviewPanel").classList.remove("hidden");
+        document.getElementById("tablePanel").classList.add("hidden");
+      }
+      send("refresh", { view });
+    }
+
+    function connectToCluster(c) {
+      if (!c) return;
+      state.selectedCluster = c;
+      state.sidebarMode = "cluster";
+      renderSidebarClusterList();
+      document.getElementById("connectError")?.classList.add("hidden");
+      send("connectCluster", { clusterId: c.id, context: c.context || "" });
+    }
+
+    function renderSidebarClusterList() {
+      const el = document.getElementById("sidebarClusterList");
+      if (!el) return;
+      el.innerHTML = "";
+      if (!state.clusters.length) {
+        el.innerHTML = '<p class="k8s-kube-empty">Chưa thấy cluster — bấm Đăng nhập cloud</p>';
+        return;
+      }
+      state.clusters.forEach((c) => {
+        const row = document.createElement("button");
+        row.type = "button";
+        const color = c.color || "yellow";
+        const active = state.connected
+          ? state.activeClusterId === c.id
+          : state.selectedCluster?.id === c.id;
+        row.className = "k8s-kube-row" + (active ? " active" : "");
+        const displayName = (c.name || c.context || "").replace(/^\★\s*/, "");
+        row.innerHTML = `
+          <i class="fa-solid fa-chevron-right row-chev"></i>
+          <span class="k8s-kube-icon ${color}"><i class="fa-solid fa-dharmachakra"></i></span>
+          <span class="k8s-kube-name">${escapeHtml(displayName)}</span>
+          <span class="k8s-cluster-dot ${active ? "green" : "grey"}"></span>`;
+        row.onclick = () => connectToCluster(c);
+        row.oncontextmenu = (e) => {
+          e.preventDefault();
+          state.activeClusterId = c.id;
+          state.activeClusterName = displayName;
+          state.activeContext = c.context || "";
+          showCtxMenu(e.clientX, e.clientY);
+        };
+        el.appendChild(row);
+      });
+    }
+
+    function onClustersReceived(payload) {
+      state.clusters = payload.clusters || [];
+      if (payload.theme) applyTheme(payload.theme);
+      const paths = payload.kubeConfigPaths || [];
+      const hint = document.getElementById("configHint");
+      if (hint) hint.textContent = paths.length ? "Đọc: " + paths.join(" · ") : "Chưa có ~/.kube/config";
+      const machine = state.clusters.filter((c) => c.id?.startsWith("machine:"));
+      const pick = machine.find((c) => c.name.startsWith("★")) || machine[0] || state.clusters[0];
+      if (pick && !state.selectedCluster) state.selectedCluster = pick;
+      renderSidebarClusterList();
+      if (payload.connected && (payload.connectedClusterId || state.activeClusterId)) {
+        state.activeClusterId = payload.connectedClusterId || state.activeClusterId;
+        const cur = state.clusters.find((c) => c.id === state.activeClusterId);
+        if (cur) state.selectedCluster = cur;
+        renderSidebarClusterList();
+        return;
+      }
+      if (!state.connected) showConnectScreen();
+    }
+
+    function showModal(title, text, isYaml) {
+      document.getElementById("modalTitle").textContent = title;
+      const ta = document.getElementById("modalContent");
+      ta.value = text || "";
+      state.yamlEditable = !!isYaml;
+      ta.readOnly = !isYaml;
+      document.getElementById("modalSave").classList.toggle("hidden", !isYaml);
+      document.getElementById("modal").classList.remove("hidden");
+    }
+
+    function hideModal() { document.getElementById("modal").classList.add("hidden"); state.yamlEditable = false; }
+
+    function showToast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.classList.remove("hidden");
+      setTimeout(() => el.classList.add("hidden"), 2500);
+    }
+
+    document.querySelectorAll(".k8s-nav-group-toggle").forEach((btn) => {
+      btn.onclick = () => btn.closest(".k8s-nav-group")?.classList.toggle("open");
+    });
+
+    document.querySelectorAll(".k8s-nav-item[data-view]").forEach((btn) => {
+      btn.onclick = () => setView(btn.dataset.view);
+    });
+
+    document.getElementById("btnBackClusters").onclick = () => showClusterPicker();
+
+    document.getElementById("btnOpenTerminal").onclick = () => createTerminalSession();
+    document.getElementById("btnAddTerminal").onclick = () => createTerminalSession();
+    document.getElementById("btnBrowseKube").onclick = () => send("browseKubeConfig");
+    document.getElementById("btnRefreshClusters").onclick = () => send("listClusters");
+
+    const clusterBadge = document.getElementById("clusterBadge");
+    clusterBadge?.addEventListener("contextmenu", (e) => {
+      if (!state.connected) return;
+      e.preventDefault();
+      showCtxMenu(e.clientX, e.clientY);
+    });
+    clusterBadge?.addEventListener("click", () => {
+      if (state.connected) openClusterSettings("namespaces");
+    });
+
+    document.getElementById("clusterCtxMenu")?.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-act], button[data-color]");
+      if (!btn) return;
+      hideCtxMenu();
+      const act = btn.dataset.act;
+      const color = btn.dataset.color;
+      if (color) {
+        send("setClusterAppearance", { clusterId: state.activeClusterId, context: state.activeContext, name: color });
+        setClusterDot(color);
+        return;
+      }
+      if (act === "disconnect") send("disconnectCluster");
+      else if (act === "settings") openClusterSettings("namespaces");
+      else if (act === "remove") {
+        if (confirm(`Xóa/ẩn cluster "${state.activeClusterName}" khỏi kubeconfig?`))
+          send("removeFromKubeconfig", { clusterId: state.activeClusterId });
+      }
+      else if (act === "hotbar") send("addToHotbar", { clusterId: state.activeClusterId });
+      else if (act === "appearance") {
+        document.getElementById("appearanceSub")?.classList.toggle("hidden");
+        e.stopPropagation();
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest("#clusterCtxMenu") && !e.target.closest("#clusterBadge"))
+        hideCtxMenu();
+    });
+
+    document.getElementById("settingsClose").onclick = () => document.getElementById("settingsModal").classList.add("hidden");
+    document.getElementById("settingsModal").onclick = (e) => {
+      if (e.target.id === "settingsModal") document.getElementById("settingsModal").classList.add("hidden");
+    };
+    document.querySelectorAll(".k8s-settings-nav button").forEach((btn) => {
+      btn.onclick = () => openClusterSettings(btn.dataset.tab);
+    });
+    document.getElementById("settingsNsAdd").onclick = () => {
+      const input = document.getElementById("settingsNsInput");
+      const ns = (input.value || "").trim();
+      if (!ns) return;
+      if (!state.accessibleNamespaces.includes(ns)) state.accessibleNamespaces.push(ns);
+      state.accessibleNamespaces.sort((a, b) => a.localeCompare(b));
+      input.value = "";
+      renderSettingsNamespaces();
+      persistAccessibleNamespaces();
+    };
+    document.getElementById("settingsNsInput").onkeydown = (e) => {
+      if (e.key === "Enter") document.getElementById("settingsNsAdd").click();
+    };
+
+    document.getElementById("btnRefresh").onclick = () => send("refresh", { view: state.view });
+    document.getElementById("btnSaveNs").onclick = () => {
+      const raw = document.getElementById("nsInput").value.trim();
+      if (!raw) return;
+      send("saveNamespaces", { context: state.activeContext, namespaces: raw.split(/[,;]+/).map((s) => s.trim()).filter(Boolean), name: raw });
+    };
+    document.getElementById("modalClose").onclick = hideModal;
+    document.getElementById("modalSave").onclick = () => {
+      if (state.yamlEditable) send("applyYaml", { yaml: document.getElementById("modalContent").value });
+      hideModal();
+    };
+    document.getElementById("modal").onclick = (e) => { if (e.target.id === "modal") hideModal(); };
+    document.getElementById("nsFilter").onchange = (e) => { state.nsFilter = e.target.value; applyFilters(); renderTable(); document.getElementById("statusLine").textContent = `${state.rows.length} items`; };
+    document.getElementById("podSearch").oninput = (e) => { state.search = e.target.value; applyFilters(); renderTable(); document.getElementById("statusLine").textContent = `${state.rows.length} items`; };
+    document.getElementById("terminalSearch")?.addEventListener("input", (e) => {
+      state.terminal.search = e.target.value;
+      applyTerminalSearch();
+    });
+    document.getElementById("btnToggleBottom").onclick = () => {
+      const p = document.getElementById("bottomPanel");
+      p.classList.toggle("collapsed");
+      const collapsed = p.classList.contains("collapsed");
+      document.getElementById("btnToggleBottom").textContent = collapsed ? "▲" : "▼";
+      if (!collapsed) {
+        const saved = parseInt(localStorage.getItem("mcp-k8s-term-height") || "240", 10);
+        if (!Number.isNaN(saved)) applyTerminalHeight(saved);
+        if (state.terminal.activeId) focusTerminalInput(state.terminal.activeId);
+      }
+    };
+
+    if (window.chrome?.webview) {
+      window.chrome.webview.addEventListener("message", (event) => {
+        let msg = event.data;
+        if (typeof msg === "string") { try { msg = JSON.parse(msg); } catch { return; } }
+        const { type, payload } = msg;
+
+        if (type === "clusters") onClustersReceived(payload || {});
+        else if (type === "connected") {
+          showDashboard(payload.clusterName || "Cluster", payload.context || "", payload);
+          state.activeClusterId = payload.clusterId || state.activeClusterId;
+          renderSidebarClusterList();
+          if (payload.noWorkloadAccess && payload.permissionInfo) {
+            const el = document.getElementById("errorBanner");
+            el.textContent = payload.permissionInfo; el.classList.remove("hidden");
+          } else if (payload.permissionInfo) {
+            const el = document.getElementById("infoBanner");
+            el.textContent = payload.permissionInfo; el.classList.remove("hidden");
+          }
+          showToast(payload.message || "Đã kết nối");
+        }
+        else if (type === "disconnected") {
+          showConnectScreen();
+          send("listClusters");
+          showToast(payload?.message || "Đã ngắt");
+        }
+        else if (type === "overview") {
+          state.view = "overview";
+          updateToolbarForView();
+          document.getElementById("viewTitle").textContent = "Overview";
+          renderOverview(payload || {});
+          document.getElementById("statusLine").textContent = "";
+        }
+        else if (LIST_VIEWS.has(type)) onListReceived(type, payload);
+        else if (type === "terminalStarted") {
+          openBottomTerminal();
+          addTerminalTab(payload?.sessionId, payload?.message || "", payload?.cwd);
+        }
+        else if (type === "terminalOutput") appendTerminalOutput(payload?.sessionId, payload?.text || "");
+        else if (type === "terminalExited") {
+          const tab = state.terminal.tabs.find((t) => t.id === payload?.sessionId);
+          if (tab) tab.exited = true;
+          renderTerminalTabs();
+        }
+        else if (type === "terminalClosed") closeTerminalTab(payload?.sessionId, true);
+        else if (type === "terminalOpened") appendTerminal(payload?.message || "Terminal opened");
+        else if (type === "logs") showModal(`Logs — ${payload.ns}/${payload.podName}`, payload.text, false);
+        else if (type === "yaml") showModal(`YAML — ${payload.ns}/${payload.podName}`, payload.text, true);
+        else if (type === "info") { const el = document.getElementById("infoBanner"); el.textContent = payload?.message || ""; el.classList.toggle("hidden", !payload?.message); }
+        else if (type === "error") {
+          const el = state.connected ? document.getElementById("errorBanner") : document.getElementById("connectError");
+          el.textContent = payload?.message || "Lỗi"; el.classList.remove("hidden");
+        }
+        else if (type === "toast") showToast(payload?.message || "");
+        else if (type === "theme") applyTheme(payload?.theme);
+        else if (type === "clusterSettings") onClusterSettings(payload);
+        else if (type === "kubeConfigBrowsed") {
+          const name = prompt("Tên cluster:", payload.fileName || "Imported");
+          if (name !== null) send("importKubeConfig", { kubeConfigPath: payload.path, clusterName: name, context: (payload.contexts || [])[0] || "", copyToAppFolder: true });
+        }
+        else if (type === "clusterImported") send("listClusters");
+      });
+    }
+
+    applyTheme(localStorage.getItem("mcp-theme") || "dark");
+    initTerminalResize();
+    showConnectScreen();
+    send("ready");
+  </script>
+</body>
+</html>

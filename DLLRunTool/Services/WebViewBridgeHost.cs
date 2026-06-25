@@ -28,7 +28,7 @@ public sealed class WebViewBridgeHost
 
     public async Task InitializeAsync()
     {
-        await _webView.EnsureCoreWebView2Async().ConfigureAwait(true);
+        await WebView2EnvironmentHelper.EnsureCoreWebView2Async(_webView).ConfigureAwait(true);
 
         var wwwroot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
         Directory.CreateDirectory(wwwroot);
@@ -63,7 +63,37 @@ public sealed class WebViewBridgeHost
 
             var request = JsonSerializer.Deserialize<BridgeRequest>(json, JsonOptions);
             if (request != null)
+            {
+                if (request.Action is "openK8sEmbed" or "layoutK8sEmbed")
+                {
+                    if (request.X is int x && request.Y is int y &&
+                        request.Width is int w && request.Height is int h)
+                    {
+                        (_webView.FindForm() as MainForm)?.LayoutK8sEmbed(x, y, w, h);
+                    }
+                    return;
+                }
+
+                if (request.Action == "closeK8sEmbed")
+                {
+                    (_webView.FindForm() as MainForm)?.CloseK8sEmbed();
+                    return;
+                }
+
+                if (request.Action is "hideK8sEmbed" or "suspendK8sEmbed")
+                {
+                    (_webView.FindForm() as MainForm)?.HideK8sEmbed();
+                    return;
+                }
+
+                if (request.Action == "syncK8sTheme" && !string.IsNullOrWhiteSpace(request.Theme))
+                {
+                    (_webView.FindForm() as MainForm)?.SyncK8sTheme(request.Theme);
+                    return;
+                }
+
                 _orchestrator.HandleRequest(request);
+            }
         }
         catch (Exception ex)
         {

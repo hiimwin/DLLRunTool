@@ -7,8 +7,10 @@
       rail: {
         services: "Services",
         handbook: "Handbook",
+        kubernetes: "Kubernetes",
         servicesTitle: "Microservices",
         handbookTitle: "Handbook",
+        kubernetesTitle: "Kubernetes",
         theme: "Dark / Light",
         lang: "Ngôn ngữ / Language"
       },
@@ -126,7 +128,11 @@
         dismiss: "Ẩn"
       },
       handbook: {
-        empty: "Chưa có nội dung handbook cho platform này."
+        empty: "Chưa có nội dung handbook cho platform này.",
+        tabArchitecture: "Kiến trúc",
+        tabKubernetes: "Kubernetes",
+        kubernetesTitle: "Kubernetes",
+        kubernetesSubtitle: "Quản lý cluster — đọc kubeconfig máy, không cần kubectl.exe"
       },
       modal: {
         title: "Cấu hình service",
@@ -185,8 +191,10 @@
       rail: {
         services: "Services",
         handbook: "Handbook",
+        kubernetes: "Kubernetes",
         servicesTitle: "Microservices",
         handbookTitle: "Handbook",
+        kubernetesTitle: "Kubernetes",
         theme: "Dark / Light",
         lang: "Language / Ngôn ngữ"
       },
@@ -304,7 +312,11 @@
         dismiss: "Dismiss"
       },
       handbook: {
-        empty: "No handbook content for this platform yet."
+        empty: "No handbook content for this platform yet.",
+        tabArchitecture: "Architecture",
+        tabKubernetes: "Kubernetes",
+        kubernetesTitle: "Kubernetes",
+        kubernetesSubtitle: "Cluster management — reads local kubeconfig, no kubectl.exe"
       },
       modal: {
         title: "Service configuration",

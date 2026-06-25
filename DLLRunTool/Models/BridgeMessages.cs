@@ -69,6 +69,24 @@ public class BridgeRequest
 
     [JsonPropertyName("cleanBinBeforeBuild")]
     public bool? CleanBinBeforeBuild { get; set; }
+
+    [JsonPropertyName("handbookTab")]
+    public string? HandbookTab { get; set; }
+
+    [JsonPropertyName("railSection")]
+    public string? RailSection { get; set; }
+
+    [JsonPropertyName("x")]
+    public int? X { get; set; }
+
+    [JsonPropertyName("y")]
+    public int? Y { get; set; }
+
+    [JsonPropertyName("width")]
+    public int? Width { get; set; }
+
+    [JsonPropertyName("height")]
+    public int? Height { get; set; }
 }
 
 public class ServiceUiConfig

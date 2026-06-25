@@ -23,6 +23,7 @@ public static class UpdateApplier
     private static readonly string[] PreserveFileNames =
     [
         "paths.local.json",
+        "k8s.local.json",
         "service-locks.json",
         "run-settings.json"
     ];

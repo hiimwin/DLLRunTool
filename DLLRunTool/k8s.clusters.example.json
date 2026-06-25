@@ -1,0 +1,18 @@
+{
+  "clusters": [
+    {
+      "id": "local-default",
+      "name": "Local — Docker Desktop / minikube",
+      "source": "default",
+      "context": ""
+    },
+    {
+      "id": "team-dev",
+      "name": "Team Dev (ví dụ)",
+      "source": "file",
+      "kubeConfigPath": "kubeconfigs/team-dev.yaml",
+      "context": "dev-admin"
+    }
+  ],
+  "lastConnectedId": "local-default"
+}

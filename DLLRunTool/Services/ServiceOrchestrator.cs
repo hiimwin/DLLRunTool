@@ -253,7 +253,7 @@ public sealed class ServiceOrchestrator
             {
                 platforms = _platforms.Select(p => new { p.Id, p.Name }),
                 activePlatformId = _activePlatformId,
-                theme = "dark",
+                theme = UiStateStore.Current.Theme,
                 appAuthor = AppAuthor,
                 appTitle = AppTitle,
                 appVersion = AppVersionInfo.Current,
@@ -1444,6 +1444,10 @@ public sealed class ServiceOrchestrator
         {
             if (!string.IsNullOrWhiteSpace(request.View))
                 state.View = request.View!;
+            if (!string.IsNullOrWhiteSpace(request.RailSection))
+                state.RailSection = request.RailSection!;
+            if (!string.IsNullOrWhiteSpace(request.HandbookTab))
+                state.HandbookTab = request.HandbookTab!;
             if (!string.IsNullOrWhiteSpace(request.LastServiceView))
                 state.LastServiceView = request.LastServiceView!;
             if (!string.IsNullOrWhiteSpace(request.Category))
@@ -1452,6 +1456,8 @@ public sealed class ServiceOrchestrator
                 state.PlatformId = request.PlatformId!;
             if (request.LogFilterServiceId != null)
                 state.LogFilterServiceId = request.LogFilterServiceId;
+            if (!string.IsNullOrWhiteSpace(request.Theme))
+                state.Theme = request.Theme!;
         });
     }
 

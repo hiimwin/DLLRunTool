@@ -29,6 +29,8 @@ function Test-SensitiveTrackedFiles {
     $files = Invoke-Git @("ls-files")
     $bad = $files -split "`n" | Where-Object {
         $_ -match '(?i)(^|/)paths\.local\.json$' -or
+        $_ -match '(?i)(^|/)k8s\.local\.json$' -or
+        $_ -match '(?i)(^|/)k8s\.clusters\.json$' -or
         $_ -match '(?i)global\..*\.secrets\.json$' -or
         $_ -match '(?i)global\..*\.be\.json$' -or
         $_ -match '(?i)appsettings\.secrets\.json$' -or

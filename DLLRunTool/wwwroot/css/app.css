@@ -1101,11 +1101,15 @@ textarea {
   min-height: 140px;
   max-height: 75vh;
   flex-shrink: 0;
-  border-top: 1px solid var(--border);
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   background: var(--bg-console);
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow: hidden;
 }
 
 .console-section.is-resizing {
@@ -1923,4 +1927,27 @@ textarea {
 
 [data-theme="dark"] .btn.danger {
   color: #fff;
+}
+
+/* Kubernetes embed (main shell) */
+body.k8s-active .console-section {
+  display: none;
+}
+
+.k8s-panel {
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.k8s-panel .k8s-host {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-app);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }

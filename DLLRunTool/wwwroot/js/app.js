@@ -21,7 +21,8 @@
     appVersion: "",
     updateInfo: null,
     lastBackupPreview: null,
-    lastGlobalConfig: null
+    lastGlobalConfig: null,
+    configSecretFindings: []
   };
 
   const MAX_LOG_HISTORY = 2000;
@@ -37,6 +38,8 @@
     handbookTitle: $("handbookTitle"),
     handbookSubtitle: $("handbookSubtitle"),
     handbookBody: $("handbookBody"),
+    k8sView: $("k8sView"),
+    k8sHost: $("k8sHost"),
     workspaceView: $("workspaceView"),
     globalView: $("globalView"),
     backupView: $("backupView"),
@@ -130,12 +133,58 @@
     viewTabsNav: $("viewTabsNav"),
     pageTitle: $("pageTitle"),
     railServices: $("railServices"),
-    railHandbook: $("railHandbook")
+    railHandbook: $("railHandbook"),
+    railKubernetes: $("railKubernetes")
   };
+
+  let k8sEmbedObserver = null;
+
+  function getK8sEmbedBounds() {
+    const host = els.k8sHost;
+    if (!host || els.k8sView?.classList.contains("hidden")) return null;
+    const r = host.getBoundingClientRect();
+    return {
+      x: Math.round(r.left),
+      y: Math.round(r.top),
+      width: Math.max(0, Math.round(r.width)),
+      height: Math.max(0, Math.round(r.height))
+    };
+  }
+
+  function layoutK8sEmbed() {
+    const b = getK8sEmbedBounds();
+    if (b && b.width > 0 && b.height > 0) {
+      Bridge.send("layoutK8sEmbed", b);
+    }
+  }
+
+  function ensureK8sEmbedObserver() {
+    if (!els.k8sHost || k8sEmbedObserver) return;
+    k8sEmbedObserver = new ResizeObserver(() => {
+      if (state.railSection === "kubernetes") layoutK8sEmbed();
+    });
+    k8sEmbedObserver.observe(els.k8sHost);
+    window.addEventListener("resize", () => {
+      if (state.railSection === "kubernetes") layoutK8sEmbed();
+    });
+  }
+
+  function openK8sPanel() {
+    ensureK8sEmbedObserver();
+    requestAnimationFrame(() => {
+      const b = getK8sEmbedBounds();
+      if (b) Bridge.send("openK8sEmbed", b);
+      requestAnimationFrame(() => {
+        layoutK8sEmbed();
+        Bridge.send("syncK8sTheme", { theme: state.theme });
+      });
+    });
+  }
 
   function persistUiState() {
     Bridge.send("saveUiState", {
       view: state.view,
+      railSection: state.railSection,
       lastServiceView: state.lastServiceView,
       category: state.category,
       platformId: state.platformId,
@@ -169,14 +218,21 @@
     return "running checking-health";
   }
 
-  function showSecretBanner(findings) {
-    if (!els.secretScanBanner || !findings?.length) {
-      els.secretScanBanner?.classList.add("hidden");
+  function refreshSecretBanner() {
+    if (!els.secretScanBanner) return;
+    const findings = state.configSecretFindings;
+    const hideForView = state.railSection === "handbook" || state.railSection === "kubernetes";
+    if (!findings?.length || localStorage.getItem("mcp-secret-banner-dismissed") === "1" || hideForView) {
+      els.secretScanBanner.classList.add("hidden");
       return;
     }
-    if (localStorage.getItem("mcp-secret-banner-dismissed") === "1") return;
     els.secretScanBannerText.textContent = t("secret.banner", { count: findings.length });
     els.secretScanBanner.classList.remove("hidden");
+  }
+
+  function showSecretBanner(findings) {
+    if (findings !== undefined) state.configSecretFindings = findings || [];
+    refreshSecretBanner();
   }
 
   function showAppDialog({ title, message, buttons }) {
@@ -224,6 +280,8 @@
   function applyTheme() {
     document.body.setAttribute("data-theme", state.theme);
     localStorage.setItem("mcp-theme", state.theme);
+    Bridge.send("saveUiState", { theme: state.theme });
+    Bridge.send("syncK8sTheme", { theme: state.theme });
   }
 
   function refreshI18nDynamic() {
@@ -891,22 +949,58 @@
 
   function updateRailChrome() {
     const isHandbook = state.railSection === "handbook";
-    if (els.viewTabsNav) els.viewTabsNav.classList.toggle("hidden", isHandbook);
+    const isK8s = state.railSection === "kubernetes";
+    if (els.viewTabsNav) els.viewTabsNav.classList.toggle("hidden", isHandbook || isK8s);
+    if (els.contextBar) els.contextBar.classList.toggle("hidden", isHandbook || isK8s);
+    if (els.platformSwitcher) els.platformSwitcher.classList.toggle("hidden", isK8s);
     if (els.pageTitle) {
-      els.pageTitle.textContent = isHandbook ? t("rail.handbookTitle") : t("rail.servicesTitle");
+      if (isK8s) els.pageTitle.textContent = t("rail.kubernetesTitle");
+      else els.pageTitle.textContent = isHandbook ? t("rail.handbookTitle") : t("rail.servicesTitle");
     }
-    if (els.railServices) els.railServices.classList.toggle("active", !isHandbook);
+    if (els.railServices) els.railServices.classList.toggle("active", state.railSection === "services");
     if (els.railHandbook) els.railHandbook.classList.toggle("active", isHandbook);
+    if (els.railKubernetes) els.railKubernetes.classList.toggle("active", isK8s);
+    if (els.consoleSection) {
+      els.consoleSection.classList.toggle("hidden", isK8s);
+      document.body.classList.toggle("k8s-active", isK8s);
+    }
+    if (els.workspaceBanner && isK8s) {
+      els.workspaceBanner.classList.add("hidden");
+    } else if (els.workspaceBanner && state.workspace) {
+      renderWorkspaceBanner(state.workspace);
+    }
+    refreshSecretBanner();
+  }
+
+  function hideWorkspacePanels() {
+    els.dashboardView?.classList.add("hidden");
+    els.handbookView?.classList.add("hidden");
+    els.k8sView?.classList.add("hidden");
+    els.workspaceView?.classList.add("hidden");
+    els.globalView?.classList.add("hidden");
+    els.backupView?.classList.add("hidden");
   }
 
   function switchRail(section, silent = false) {
+    if (state.railSection === "kubernetes" && section !== "kubernetes") {
+      Bridge.send("hideK8sEmbed");
+    }
     state.railSection = section;
+
+    if (section === "kubernetes") {
+      state.view = "kubernetes";
+      hideWorkspacePanels();
+      els.k8sView?.classList.remove("hidden");
+      updateRailChrome();
+      openK8sPanel();
+      updateNavContext();
+      if (!silent) persistUiState();
+      return;
+    }
+
     if (section === "handbook") {
       state.view = "handbook";
-      els.dashboardView.classList.add("hidden");
-      els.workspaceView.classList.add("hidden");
-      els.globalView.classList.add("hidden");
-      els.backupView.classList.add("hidden");
+      hideWorkspacePanels();
       els.handbookView.classList.remove("hidden");
       renderHandbook();
       updateRailChrome();
@@ -925,14 +1019,19 @@
       return;
     }
 
+    if (state.railSection === "kubernetes") {
+      Bridge.send("hideK8sEmbed");
+      state.railSection = "services";
+    }
+
     state.lastServiceView = view;
     state.railSection = "services";
     state.view = view;
     document.querySelectorAll(".view-tab").forEach((tab) => {
       tab.classList.toggle("active", tab.dataset.view === view);
     });
+    hideWorkspacePanels();
     els.dashboardView.classList.toggle("hidden", view !== "dashboard");
-    els.handbookView.classList.add("hidden");
     els.workspaceView.classList.toggle("hidden", view !== "workspace");
     els.globalView.classList.toggle("hidden", view !== "global");
     els.backupView.classList.toggle("hidden", view !== "backup");
@@ -1065,22 +1164,34 @@
     });
   }
 
+  function applyStartupLayout(uiState) {
+    if (uiState?.railSection === "handbook" || uiState?.view === "handbook") {
+      switchRail("handbook", true);
+      return;
+    }
+
+    state.railSection = "services";
+    state.category = uiState?.category === "FE" ? "FE" : "BE";
+    const validViews = ["dashboard", "workspace", "global", "backup"];
+    const savedView = uiState?.lastServiceView || uiState?.view;
+    state.lastServiceView = validViews.includes(savedView) ? savedView : "dashboard";
+    state.view = state.lastServiceView;
+
+    document.querySelectorAll(".category-tab").forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.category === state.category);
+    });
+
+    switchRail("services", true);
+    switchView(state.lastServiceView, true);
+  }
+
   function restoreUiState(uiState) {
     if (!uiState) return;
+    if (uiState.theme === "light" || uiState.theme === "dark") {
+      state.theme = uiState.theme;
+    }
     if (uiState.platformId && state.platforms.some((p) => p.id === uiState.platformId)) {
       state.platformId = uiState.platformId;
-    }
-    if (uiState.category === "BE" || uiState.category === "FE") {
-      state.category = uiState.category;
-      document.querySelectorAll(".category-tab").forEach((tab) => {
-        tab.classList.toggle("active", tab.dataset.category === state.category);
-      });
-    }
-    if (uiState.lastServiceView) {
-      state.lastServiceView = uiState.lastServiceView;
-    }
-    if (uiState.view) {
-      switchView(uiState.view, true);
     }
     if (uiState.logFilterServiceId) {
       setLogFilterValue(uiState.logFilterServiceId, findServiceName(uiState.logFilterServiceId), true);
@@ -1385,6 +1496,9 @@
   if (els.railHandbook) {
     els.railHandbook.onclick = () => switchRail("handbook");
   }
+  if (els.railKubernetes) {
+    els.railKubernetes.onclick = () => switchRail("kubernetes");
+  }
 
   els.themeToggle.onclick = () => {
     state.theme = state.theme === "dark" ? "light" : "dark";
@@ -1621,6 +1735,7 @@
     state.platformId = payload.activePlatformId;
     state.platforms = payload.platforms || [];
     state.appVersion = payload.appVersion || "";
+    if (payload.theme === "light" || payload.theme === "dark") state.theme = payload.theme;
     if (payload.appTitle) document.title = payload.appTitle;
     if (els.appVersionBadge && state.appVersion) {
       els.appVersionBadge.textContent = `v${state.appVersion}`;
@@ -1635,6 +1750,7 @@
     renderPlatforms();
     applyTheme();
     initConsoleResize();
+    applyStartupLayout(payload.uiState);
     updateRailChrome();
     updateNavContext();
   });

@@ -19,6 +19,9 @@
       <button class="rail-icon rail-brand" id="railHandbook" type="button" data-rail="handbook" data-i18n-title="rail.handbook" title="Handbook">
         <img class="rail-logo" src="assets/handbook-mark.svg" alt="" width="32" height="32" />
       </button>
+      <button class="rail-icon rail-brand" id="railKubernetes" type="button" data-rail="kubernetes" data-i18n-title="rail.kubernetes" title="Kubernetes">
+        <img class="rail-logo" src="assets/k8s-mark.svg" alt="" width="32" height="32" />
+      </button>
       <div class="rail-spacer"></div>
       <button class="rail-icon lang-toggle" id="langToggle" type="button" data-i18n-title="rail.lang" title="Ngôn ngữ">
         <span class="lang-label">VI</span>
@@ -108,6 +111,12 @@
               </div>
             </div>
             <div class="handbook-body" id="handbookBody"></div>
+          </div>
+        </section>
+
+        <section class="view-panel hidden" id="k8sView">
+          <div class="panel-card k8s-panel">
+            <div class="k8s-host" id="k8sHost" aria-label="Kubernetes dashboard"></div>
           </div>
         </section>
 

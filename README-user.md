@@ -11,9 +11,18 @@ Tool chạy / dừng / build microservices local (Back-End + Front-End).
 
 ## Console log
 
-- Log hiển thị dưới cùng mọi tab; lọc theo service, tìm/copy log.
+- Log hiển thị dưới cùng mọi tab; **kéo mép trên** để đổi chiều cao; bo góc card.
+- Lọc theo service, tìm/copy log.
 - **CMD tất cả** / **CMD đang chọn**: mở cửa sổ mirror log (tùy chọn).
 - Redis: log nằm trong tool, không mở CMD riêng.
+
+## Kubernetes
+
+- Tab **Kubernetes** (icon vàng trên rail trái): quản lý cluster từ kubeconfig máy bạn.
+- Chọn cluster bên trái → xem Pods, Deployments, …
+- **Đăng nhập cloud**: terminal PowerShell trong tool (nhiều tab, kéo resize).
+- Sau `az login` / `get-credentials` → bấm **Quét lại**.
+- Chuyển sang tab Dịch vụ vẫn giữ kết nối cluster.
 
 ## Health check
 
@@ -71,6 +80,7 @@ Không có cách tắt SmartScreen 100% bằng code nếu **không ký** exe —
 | File | Mục đích |
 |------|----------|
 | `paths.local.json` | Đường dẫn workspace |
+| `k8s.local.json` | Cấu hình cluster K8s (local) |
 | `global.*.json` | Cấu hình chung |
 | `global.*.secrets.json` | DB password |
 | `backups/` | Export config (đầy đủ — không share) |

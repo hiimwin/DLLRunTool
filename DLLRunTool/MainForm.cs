@@ -11,6 +11,7 @@ public partial class MainForm : Form
         DefaultBackgroundColor = Color.FromArgb(255, 26, 27, 30)
     };
     private WebViewBridgeHost? _bridge;
+    private bool _webViewInitStarted;
 
     public MainForm()
     {
@@ -18,7 +19,7 @@ public partial class MainForm : Form
         TrySetWindowIcon();
         Controls.Add(_webView);
         HandleCreated += (_, _) => WindowChrome.ApplyRoundedCorners(this);
-        Load += MainForm_Load;
+        Shown += MainForm_Shown;
         FormClosing += MainForm_FormClosing;
     }
 
@@ -36,8 +37,13 @@ public partial class MainForm : Form
         }
     }
 
-    private async void MainForm_Load(object? sender, EventArgs e)
+    private async void MainForm_Shown(object? sender, EventArgs e)
     {
+        if (_webViewInitStarted)
+            return;
+
+        _webViewInitStarted = true;
+
         try
         {
             _bridge = new WebViewBridgeHost(_webView);
@@ -47,7 +53,7 @@ public partial class MainForm : Form
         {
             StyledMessageBox.Show(
                 this,
-                $"Không thể khởi tạo WebView2.\n\n{ex.Message}\n\nHãy cài đặt WebView2 Runtime.",
+                $"Không thể khởi tạo WebView2.\n\n{WebView2EnvironmentHelper.FormatInitError(ex)}",
                 ServiceOrchestrator.AppTitle,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -56,8 +62,10 @@ public partial class MainForm : Form
 
     public WebViewBridgeHost? BridgeHost => _bridge;
 
-    private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
+    private async void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
     {
+        await CleanupK8sOnFormClosingAsync().ConfigureAwait(false);
+
         if (ServiceOrchestrator.IsApplyingUpdate)
             return;
 
