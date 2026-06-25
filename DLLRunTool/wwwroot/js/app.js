@@ -212,12 +212,16 @@
       buttons: [
         { id: "cancel", label: t("confirm.cancel") },
         { id: "yes", label: t("confirm.yes"), primary: true, danger: true }
-      ]
+      ],
+      resumeK8s: false
     });
-    if (action !== "yes") return;
+    if (action !== "yes") {
+      if (state.railSection === "kubernetes") openK8sPanel();
+      return;
+    }
     state.k8sEngineActive = false;
-    Bridge.send("closeK8sEmbed");
     updateK8sPanelChrome();
+    Bridge.send("closeK8sEmbed");
   }
 
   function persistUiState() {
@@ -274,7 +278,19 @@
     refreshSecretBanner();
   }
 
-  function showAppDialog({ title, message, buttons }) {
+  function suspendK8sEmbedForDialog() {
+    if (!state.k8sEngineActive || state.railSection !== "kubernetes") return false;
+    Bridge.send("hideK8sEmbed");
+    return true;
+  }
+
+  function resumeK8sEmbedAfterDialog(wasSuspended) {
+    if (wasSuspended && state.k8sEngineActive && state.railSection === "kubernetes") {
+      openK8sPanel();
+    }
+  }
+
+  function showAppDialog({ title, message, buttons, resumeK8s = true }) {
     const overlay = $("appDialog");
     const titleEl = $("appDialogTitle");
     const messageEl = $("appDialogMessage");
@@ -282,6 +298,8 @@
     if (!overlay || !titleEl || !messageEl || !actionsEl) {
       return Promise.resolve(buttons?.[buttons.length - 1]?.id || "cancel");
     }
+
+    const k8sSuspended = suspendK8sEmbedForDialog();
 
     titleEl.textContent = title || "";
     messageEl.textContent = message || "";
@@ -291,6 +309,7 @@
     return new Promise((resolve) => {
       const close = (id) => {
         overlay.classList.add("hidden");
+        if (resumeK8s) resumeK8sEmbedAfterDialog(k8sSuspended);
         resolve(id);
       };
 

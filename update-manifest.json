@@ -2,5 +2,5 @@
   "version": "1.3.1",
   "releasedAt": "2026-06-25",
   "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1.3.1/Win_Trung-MicroservicesControlPanel.zip",
-  "releaseNotes": "## DLLRunTool v1.3.1\n\n### Kubernetes\n- Port-forward kieu Lens: modal local port/https, danh sach Port Forwarding Start/Stop, chi tiet service\n- Ket noi cluster nhanh hon: vao dashboard ngay, load RBAC/namespace nen\n- Bat/Tat Kubernetes thu cong: khong tu chay WebView khi an nham tab — tiet kiem RAM\n- Chấm trạng thái cluster xanh khi đã kết nối\n- Hộp thoại xác nhận tắt K8s dùng UI của tool (không popup trình duyệt)\n\n### Giao dien\n- Service detail panel: Properties, Connection, Endpoints, Events\n- Sua layout port-forward modal va service detail panel"
+  "releaseNotes": "## DLLRunTool v1.3.1\n\n### Kubernetes\n- Port-forward kieu Lens: modal local port/https, danh sach Port Forwarding Start/Stop, chi tiet service\n- Ket noi cluster nhanh hon: vao dashboard ngay, load RBAC/namespace nen\n- Bat/Tat Kubernetes thu cong: khong tu chay WebView khi an nham tab — tiet kiem RAM\n- Cham trang thai cluster xanh khi da ket noi\n- Hop thoai xac nhan tat K8s hien dung (an embed truoc khi hien dialog)\n\n### Giao dien\n- Service detail panel: Properties, Connection, Endpoints, Events\n- Sua layout port-forward modal va service detail panel"
 }
