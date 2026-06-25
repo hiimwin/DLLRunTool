@@ -168,7 +168,8 @@
         idleDesc: "Bật khi cần quản lý cluster. Tiết kiệm RAM khi không dùng — tab Services/Handbook vẫn dùng bình thường.",
         powerOn: "Bật Kubernetes",
         powerOff: "Tắt Kubernetes (giải phóng RAM)",
-        powerOffConfirm: "Tắt Kubernetes và giải phóng RAM?\n\nKết nối cluster và port-forward đang chạy sẽ dừng.",
+        powerOffConfirmTitle: "Tắt Kubernetes",
+        powerOffConfirmMsg: "Giải phóng RAM?\n\nKết nối cluster và port-forward đang chạy sẽ dừng.",
         engineRunning: "Kubernetes đang chạy — chuyển tab khác vẫn giữ kết nối"
       },
       update: {
@@ -360,7 +361,8 @@
         idleDesc: "Enable when you need cluster management. Saves RAM when idle — Services/Handbook tabs work normally.",
         powerOn: "Enable Kubernetes",
         powerOff: "Disable Kubernetes (free RAM)",
-        powerOffConfirm: "Disable Kubernetes and free RAM?\n\nActive cluster connections and port-forwards will stop.",
+        powerOffConfirmTitle: "Disable Kubernetes",
+        powerOffConfirmMsg: "Free RAM?\n\nActive cluster connections and port-forwards will stop.",
         engineRunning: "Kubernetes is running — switching tabs keeps the connection"
       },
       update: {

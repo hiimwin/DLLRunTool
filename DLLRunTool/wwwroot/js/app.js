@@ -204,9 +204,17 @@
     }
   }
 
-  function disableK8sEngine() {
+  async function disableK8sEngine() {
     if (!state.k8sEngineActive) return;
-    if (!confirm(t("k8s.powerOffConfirm"))) return;
+    const action = await showAppDialog({
+      title: t("k8s.powerOffConfirmTitle"),
+      message: t("k8s.powerOffConfirmMsg"),
+      buttons: [
+        { id: "cancel", label: t("confirm.cancel") },
+        { id: "yes", label: t("confirm.yes"), primary: true, danger: true }
+      ]
+    });
+    if (action !== "yes") return;
     state.k8sEngineActive = false;
     Bridge.send("closeK8sEmbed");
     updateK8sPanelChrome();

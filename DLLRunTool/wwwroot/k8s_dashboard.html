@@ -637,10 +637,11 @@
     }
 
     function setClusterDot(color) {
+      if (color) state.clusterColor = color || "yellow";
       const dot = document.getElementById("clusterDot");
       if (!dot) return;
-      dot.className = "k8s-cluster-dot " + (color || "yellow");
-      state.clusterColor = color || "yellow";
+      const displayColor = state.connected ? "green" : (state.clusterColor || "grey");
+      dot.className = "k8s-cluster-dot " + displayColor;
     }
 
     function updateClusterBadge(name, context) {
