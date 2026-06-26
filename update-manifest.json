@@ -1,6 +1,6 @@
 ﻿{
-    "version":  "1.3.2",
+    "version":  "1.3.3",
     "releasedAt":  "2026-06-26",
-    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.3.2/Win_Trung-MicroservicesControlPanel.zip",
-    "releaseNotes":  "Sua loi layout tab Workspace: cac o cau hinh duong dan bi che/an, gio hien day du va cuon duoc."
+    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.3.3/Win_Trung-MicroservicesControlPanel.zip",
+    "releaseNotes":  "Fix port-forward Start/Stop ngoai luoi khong phan hoi (dataset pfAct); fix menu loc Console Log bi an sau panel services; null-guard khi chon cluster."
 }

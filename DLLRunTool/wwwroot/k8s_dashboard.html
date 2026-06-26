@@ -1302,7 +1302,7 @@
       body.querySelectorAll("button[data-pf-act]").forEach((btn) => {
         btn.onclick = (e) => {
           e.stopPropagation();
-          const { act, id, name, ns, port, kind, local, https, browser } = btn.dataset;
+          const { pfAct: act, id, name, ns, port, kind, local, https, browser } = btn.dataset;
           if (act === "stop") {
             send("stopPortForward", { portForwardId: id || btn.dataset.cid });
             setTimeout(refreshPfDetailIfOpen, 400);
@@ -1413,7 +1413,7 @@
       const hint = document.getElementById("configHint");
       if (hint) hint.textContent = paths.length ? "Đọc: " + paths.join(" · ") : "Chưa có ~/.kube/config";
       const machine = state.clusters.filter((c) => c.id?.startsWith("machine:"));
-      const pick = machine.find((c) => c.name.startsWith("★")) || machine[0] || state.clusters[0];
+      const pick = machine.find((c) => c.name?.startsWith("★")) || machine[0] || state.clusters[0];
       if (pick && !state.selectedCluster) state.selectedCluster = pick;
       renderSidebarClusterList();
       if (payload.connected && (payload.connectedClusterId || state.activeClusterId)) {
