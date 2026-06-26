@@ -164,7 +164,7 @@ public partial class MainForm
 
     private async Task CleanupK8sOnFormClosingAsync()
     {
-        await DisconnectK8sAsync().ConfigureAwait(false);
+        await DisconnectK8sAsync().ConfigureAwait(true);
         TeardownK8sWebView();
     }
 }
