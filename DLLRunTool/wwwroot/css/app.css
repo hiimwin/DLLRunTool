@@ -431,12 +431,21 @@ body {
 }
 
 .dashboard-panel .dashboard-list,
-.workspace-panel .workspace-path-list,
 .global-panel > #globalBeConfig,
 .global-panel > #globalFeConfig {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+/* Workspace: it dong path -> cao theo noi dung, ca panel cuon khi can */
+.workspace-panel {
+  overflow-y: auto;
+}
+
+.workspace-panel .workspace-path-list {
+  flex: 0 0 auto;
+  overflow: visible;
 }
 
 .panel-card-header,

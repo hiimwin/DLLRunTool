@@ -26,3 +26,5 @@ service-logs/
 # Dev test harness (local paths / kubeconfig — khong commit)
 scripts/K8sConnectTest/
 scripts/test-k8s-connect.csx
+scripts/export-be-settings.ps1
+loyalty-be-settings-full.json
