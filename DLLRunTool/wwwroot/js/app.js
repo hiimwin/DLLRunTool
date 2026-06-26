@@ -826,9 +826,32 @@
     els.logFilterBtn?.setAttribute("aria-expanded", "false");
   }
 
+  function positionLogFilterMenu() {
+    if (!els.logFilterMenu || !els.logFilterBtn) return;
+    const rect = els.logFilterBtn.getBoundingClientRect();
+    const margin = 6;
+    const menuWidth = els.logFilterMenu.offsetWidth || 200;
+    const menuHeight = els.logFilterMenu.offsetHeight || 0;
+    let left = rect.left;
+    if (left + menuWidth > window.innerWidth - 8) {
+      left = Math.max(8, window.innerWidth - menuWidth - 8);
+    }
+    const spaceAbove = rect.top;
+    const openUpward = spaceAbove >= menuHeight + margin || spaceAbove >= window.innerHeight - rect.bottom;
+    els.logFilterMenu.style.left = `${Math.round(left)}px`;
+    if (openUpward) {
+      els.logFilterMenu.style.top = "auto";
+      els.logFilterMenu.style.bottom = `${Math.round(window.innerHeight - rect.top + margin)}px`;
+    } else {
+      els.logFilterMenu.style.bottom = "auto";
+      els.logFilterMenu.style.top = `${Math.round(rect.bottom + margin)}px`;
+    }
+  }
+
   function toggleLogFilterMenu() {
     if (!els.logFilterMenu || !els.logFilterBtn) return;
     const isHidden = els.logFilterMenu.classList.toggle("hidden");
+    if (!isHidden) positionLogFilterMenu();
     els.logFilterBtn.setAttribute("aria-expanded", isHidden ? "false" : "true");
   }
 
