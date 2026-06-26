@@ -1,6 +1,6 @@
 ﻿{
-    "version":  "1.3.4",
+    "version":  "1.3.5",
     "releasedAt":  "2026-06-26",
-    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.3.4/Win_Trung-MicroservicesControlPanel.zip",
-    "releaseNotes":  "Cai thien luong dong tool: hoi xac nhan truoc roi moi cleanup, hien overlay \u0027Dang dong...\u0027 + chong bam spam; fix dispose WebView2 sai thread."
+    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.3.5/Win_Trung-MicroservicesControlPanel.zip",
+    "releaseNotes":  "Sua dialog thoat tool dem sai so service (dedupe theo PID, redis 2 platform khong con dem 2); dialog hien nhanh (quet process 1 lan thay vi N query WMI)."
 }

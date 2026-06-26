@@ -1005,41 +1005,73 @@ public sealed class ServiceOrchestrator
             category.Equals("FE", StringComparison.OrdinalIgnoreCase) ? s.IsFrontEnd : s.IsBackEnd).ToList();
 
     public int CountRunningServices() =>
-        GetRunningServices().Count;
+        GetRunningServiceProcesses()
+            .Select(x => x.Pid)
+            .Distinct()
+            .Count();
 
     public int CountLockedRunningServices() =>
-        GetRunningServices().Count(s => ServiceLocksStore.IsLocked(s.Id));
+        GetRunningServiceProcesses()
+            .Where(x => ServiceLocksStore.IsLocked(x.Service.Id))
+            .Select(x => x.Pid)
+            .Distinct()
+            .Count();
 
-    private List<ServiceConfig> GetRunningServices()
+    // Quét process 1 lần (force) rồi đối chiếu từng service với cache (không refresh lại
+    // cho mỗi service — tránh chạy lại WMI N lần gây chậm vài giây khi đóng tool).
+    // Trả về kèm PID để dedupe: cùng 1 process (vd redis-server.exe) có thể khớp nhiều
+    // định nghĩa service ở các platform khác nhau → không bị đếm trùng.
+    private List<(ServiceConfig Service, int Pid)> GetRunningServiceProcesses()
     {
         ProcessStatusCache.RefreshIfStale(force: true);
-        return _platformServices.Values
-            .SelectMany(list => list)
-            .Where(s => ProcessTreeKiller.FindRunningProcess(s, forceRefresh: true) != null)
-            .ToList();
+        var result = new List<(ServiceConfig, int)>();
+        foreach (var service in _platformServices.Values.SelectMany(list => list))
+        {
+            var proc = ProcessTreeKiller.FindRunningProcess(service, forceRefresh: false);
+            if (proc != null)
+                result.Add((service, proc.Id));
+        }
+        return result;
     }
 
     public int StopAllServices()
     {
         var stopped = 0;
         var skippedLocked = 0;
-        foreach (var list in _platformServices.Values)
+
+        // Gom service đang chạy theo PID (1 process có thể khớp nhiều config, vd redis ở
+        // 2 platform). Coi là khóa nếu BẤT KỲ config nào khóa — không phụ thuộc thứ tự.
+        ProcessStatusCache.RefreshIfStale(force: true);
+        var byPid = new Dictionary<int, (ServiceConfig Service, bool Locked)>();
+        foreach (var service in _platformServices.Values.SelectMany(list => list))
         {
-            foreach (var service in list)
+            var proc = ProcessTreeKiller.FindRunningProcess(service, forceRefresh: false);
+            if (proc == null)
+                continue;
+
+            var locked = ServiceLocksStore.IsLocked(service.Id);
+            if (byPid.TryGetValue(proc.Id, out var existing))
             {
-                if (ProcessTreeKiller.FindRunningProcess(service, forceRefresh: true) == null)
-                    continue;
-
-                if (ServiceLocksStore.IsLocked(service.Id))
-                {
-                    skippedLocked++;
-                    continue;
-                }
-
-                ProcessTreeKiller.KillByService(service, RunSettingsStore.StopGracefulTimeoutMs);
-                _healthStatus[service.Id] = "unknown";
-                stopped++;
+                if (!existing.Locked && locked)
+                    byPid[proc.Id] = (existing.Service, true);
             }
+            else
+            {
+                byPid[proc.Id] = (service, locked);
+            }
+        }
+
+        foreach (var (_, entry) in byPid)
+        {
+            if (entry.Locked)
+            {
+                skippedLocked++;
+                continue;
+            }
+
+            ProcessTreeKiller.KillByService(entry.Service, RunSettingsStore.StopGracefulTimeoutMs);
+            _healthStatus[entry.Service.Id] = "unknown";
+            stopped++;
         }
 
         if (stopped > 0 || skippedLocked > 0)
