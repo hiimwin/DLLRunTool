@@ -43,14 +43,18 @@ public sealed class ServiceOrchestrator
         _uiOwner = uiOwner;
         _platforms =
         [
+            // Loyalty dùng ABP v6 (online license check ở Development vẫn pass với token hiện tại) → giữ mặc định chung.
             new PlatformDefinition { Id = "loyalty", Name = "LoyaltyPlatform", ConfigFile = "services.loyalty.json" },
-            new PlatformDefinition { Id = "fptcx", Name = "FPTCXSuite", ConfigFile = "services.json" }
+            // FPTCXSuite dùng ABP Commercial v9: chạy ở Development bắt buộc ABP online license check
+            // (cần "abp login" cover v9 → đang fail "ABP-LIC-ERROR"). Chạy Production để ABP dùng
+            // offline AbpLicenseCode trong appsettings.secrets.json (giống khi gõ tay `dotnet x.dll`).
+            new PlatformDefinition { Id = "fptcx", Name = "FPTCXSuite", ConfigFile = "services.json", RunEnvironment = "Production" }
         ];
 
         WorkspacePathsStore.EnsureLoaded();
 
         foreach (var platform in _platforms)
-            _platformServices[platform.Id] = LoadServices(platform.ConfigFile);
+            _platformServices[platform.Id] = LoadServices(platform);
 
         ServiceLocksStore.EnsureProtectedDefaults(_platformServices.Values.SelectMany(s => s));
 
@@ -440,7 +444,7 @@ public sealed class ServiceOrchestrator
     private void ReloadAllServices()
     {
         foreach (var platform in _platforms)
-            _platformServices[platform.Id] = LoadServices(platform.ConfigFile);
+            _platformServices[platform.Id] = LoadServices(platform);
 
         ServiceLocksStore.EnsureProtectedDefaults(_platformServices.Values.SelectMany(s => s));
         ProcessStatusCache.Invalidate();
@@ -1686,9 +1690,9 @@ public sealed class ServiceOrchestrator
     private static bool IsRunBlocked(ServiceConfig service) =>
         service.RunProtected && ServiceLocksStore.IsLocked(service.Id);
 
-    private static List<ServiceConfig> LoadServices(string fileName)
+    private static List<ServiceConfig> LoadServices(PlatformDefinition platform)
     {
-        var path = Path.Combine(AppContext.BaseDirectory, fileName);
+        var path = Path.Combine(AppContext.BaseDirectory, platform.ConfigFile);
         if (!File.Exists(path))
             return [];
 
@@ -1702,6 +1706,10 @@ public sealed class ServiceOrchestrator
 
             if (string.IsNullOrWhiteSpace(svc.Type))
                 svc.Type = svc.IsFrontEndByConfig() ? "FE" : "BE";
+
+            // Service không tự khai env → kế thừa mặc định của platform (vd. fptcx = Production).
+            if (string.IsNullOrWhiteSpace(svc.RunEnvironment) && !string.IsNullOrWhiteSpace(platform.RunEnvironment))
+                svc.RunEnvironment = platform.RunEnvironment!;
 
             svc.FolderPath = WorkspacePathsStore.Resolve(svc.FolderPath);
             svc.ProjectPath = WorkspacePathsStore.Resolve(svc.ProjectPath);

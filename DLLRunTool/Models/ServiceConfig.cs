@@ -20,6 +20,14 @@ public class ServiceConfig
     /// <summary>Khoá mặc định — phải mở khóa + xác nhận mới được Run (vd. DbMigrator).</summary>
     public bool RunProtected { get; set; }
 
+    /// <summary>
+    /// ASPNETCORE_ENVIRONMENT áp dụng riêng khi RUN service này (đè biến môi trường chung).
+    /// Để trống = dùng mặc định của platform / cấu hình chung.
+    /// Dùng cho ABP Commercial v9: chạy ở Development buộc ABP online license check
+    /// (cần "abp login" cover đúng version); chạy non-Development dùng offline AbpLicenseCode.
+    /// </summary>
+    public string RunEnvironment { get; set; } = "";
+
     /// <summary>Ghi chú hiển thị trên dashboard (VPN, port, cảnh báo...).</summary>
     public string Notes { get; set; } = "";
 
@@ -314,4 +322,10 @@ public class PlatformDefinition
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public string ConfigFile { get; set; } = "";
+
+    /// <summary>
+    /// ASPNETCORE_ENVIRONMENT mặc định khi RUN service của platform này (đè biến chung),
+    /// trừ khi service tự khai RunEnvironment riêng. Để trống = không đè (theo cấu hình chung).
+    /// </summary>
+    public string? RunEnvironment { get; set; }
 }

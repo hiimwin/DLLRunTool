@@ -104,6 +104,11 @@ public sealed class AsyncCommandRunner
         };
         RunSettingsStore.ApplyToProcess(psi);
 
+        // Đè ASPNETCORE_ENVIRONMENT riêng cho service nếu có (vd. fptcx = Production để ABP dùng
+        // offline AbpLicenseCode, tránh online license check fail ở Development).
+        if (!string.IsNullOrWhiteSpace(service.RunEnvironment))
+            psi.Environment["ASPNETCORE_ENVIRONMENT"] = service.RunEnvironment;
+
         Process process;
         try
         {
