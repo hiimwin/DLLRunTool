@@ -1,6 +1,6 @@
-{
-  "version": "1.3.6",
-  "releasedAt": "2026-06-29",
-  "downloadUrl": "https://github.com/hiimwin/DLLRunTool/releases/download/v1.3.6/Win_Trung-MicroservicesControlPanel.zip",
-  "releaseNotes": "Fix fptcx (ABP v9) ABP-LIC-ERROR khi RUN: chay o Production de dung offline AbpLicenseCode trong appsettings.secrets.json (loyalty giu Development). Them per-platform/per-service RunEnvironment."
+﻿{
+    "version":  "1.3.7",
+    "releasedAt":  "2026-06-30",
+    "downloadUrl":  "https://github.com/hiimwin/DLLRunTool/releases/download/v1.3.7/Win_Trung-MicroservicesControlPanel.zip",
+    "releaseNotes":  "Fix service ket o \u0027Dang khoi dong (chua check health)\u0027 khi tat roi mo lai tool - tu health-check ngay cho service chay nen. K8s port-forward nho trang thai bat/tat va tu khoi dong lai khi ket noi lai cluster."
 }
