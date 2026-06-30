@@ -69,4 +69,9 @@ public sealed class K8sPortForwardConfig
     public int LocalPort { get; set; }
     public bool UseHttps { get; set; }
     public bool OpenInBrowser { get; set; }
+    /// <summary>
+    /// Trạng thái mong muốn: true = đang bật (đã Start) → tự khởi động lại khi mở/kết nối lại
+    /// cluster. Đặt false khi user bấm Stop. Nhớ qua các lần tắt/mở tool.
+    /// </summary>
+    public bool AutoStart { get; set; }
 }

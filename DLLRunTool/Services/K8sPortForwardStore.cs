@@ -76,6 +76,30 @@ public static class K8sPortForwardStore
         return cfg;
     }
 
+    /// <summary>
+    /// Đánh dấu trạng thái mong muốn (AutoStart) của một port-forward đã lưu — dùng để tự
+    /// khởi động lại khi kết nối lại cluster. Không tạo mới nếu config chưa tồn tại.
+    /// </summary>
+    public static void SetEnabled(string? context, string configId, bool enabled)
+    {
+        if (string.IsNullOrWhiteSpace(context) || string.IsNullOrWhiteSpace(configId))
+            return;
+
+        K8sClusterStore.EnsureLoaded();
+        var local = K8sClusterStore.LoadLocalFile();
+        if (local.PortForwardsByContext == null
+            || !local.PortForwardsByContext.TryGetValue(context, out var list)
+            || list == null)
+            return;
+
+        var cfg = list.FirstOrDefault(c => string.Equals(c.Id, configId, StringComparison.OrdinalIgnoreCase));
+        if (cfg == null || cfg.AutoStart == enabled)
+            return;
+
+        cfg.AutoStart = enabled;
+        K8sClusterStore.SaveLocalFile(local);
+    }
+
     public static void Remove(string? context, string configId)
     {
         if (string.IsNullOrWhiteSpace(context) || string.IsNullOrWhiteSpace(configId))

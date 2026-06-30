@@ -977,7 +977,7 @@ public sealed class ServiceOrchestrator
     private bool HasActiveStatusChanged() =>
         BuildActiveStatusSnapshot() != _lastStatusSnapshot;
 
-    private static void RefreshStatuses(List<ServiceConfig> services)
+    private void RefreshStatuses(List<ServiceConfig> services)
     {
         foreach (var svc in services)
         {
@@ -989,6 +989,19 @@ public sealed class ServiceOrchestrator
                 var found = ProcessStatusCache.FindForService(svc);
                 if (found != null && !found.HasExited)
                     svc.ManagedProcess = found;
+            }
+
+            // Service đang chạy nền nhưng tool chưa theo dõi health (vd. tắt rồi mở lại tool,
+            // hoặc RUN khi nó đã chạy nền): tự kick health-poll ngay để không kẹt mãi ở
+            // "Đang khởi động (chưa check health)" — vì ToStateDto mặc định "starting" khi
+            // IsRunning mà thiếu entry trong _healthStatus.
+            if (svc.IsRunning
+                && ServiceHealthChecker.CanCheck(svc)
+                && !_healthStatus.ContainsKey(svc.Id))
+            {
+                _healthStatus[svc.Id] = "starting";
+                _healthPollProgress[svc.Id] = (0, ServiceHealthChecker.MaxPollAttempts);
+                _ = PollHealthAsync(svc, immediate: true);
             }
         }
     }
@@ -1603,7 +1616,7 @@ public sealed class ServiceOrchestrator
         });
     }
 
-    private async Task PollHealthAsync(ServiceConfig service)
+    private async Task PollHealthAsync(ServiceConfig service, bool immediate = false)
     {
         if (!ServiceHealthChecker.CanCheck(service))
             return;
@@ -1613,7 +1626,10 @@ public sealed class ServiceOrchestrator
 
         for (var i = 0; i < max; i++)
         {
-            await Task.Delay(delays[i]).ConfigureAwait(false);
+            // Reattach (service đã chạy sẵn): check ngay lần đầu, không chờ delay khởi động.
+            var wait = immediate && i == 0 ? 0 : delays[i];
+            if (wait > 0)
+                await Task.Delay(wait).ConfigureAwait(false);
 
             if (!service.IsRunning)
             {

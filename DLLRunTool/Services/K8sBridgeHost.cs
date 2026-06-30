@@ -310,6 +310,7 @@ public sealed class K8sBridgeHost : IAsyncDisposable
             if (generation != _connectGeneration)
                 return;
 
+            StartEnabledForwards(generation);
             await PushPortForwardsAsync().ConfigureAwait(false);
             PostMessage("loadingDone", new { clusterId });
             PostInfoIfAny();
@@ -847,6 +848,8 @@ public sealed class K8sBridgeHost : IAsyncDisposable
                 useHttps,
                 openInBrowser);
 
+            K8sPortForwardStore.SetEnabled(context, session.ConfigId, true);
+
             PostMessage("portForwardStarted", new
             {
                 message = $"Port-forward: {session.Url} → {ns}/{name}:{session.RemotePort}",
@@ -872,10 +875,16 @@ public sealed class K8sBridgeHost : IAsyncDisposable
             return;
         }
 
+        // id có thể là sessionId ("configId@localPort") hoặc configId thuần.
+        var configId = id.Contains('@') ? id[..id.IndexOf('@')] : id;
+
         if (id.Contains('@'))
             K8sPortForwardManager.Stop(id);
         else
             K8sPortForwardManager.StopByConfigId(id);
+
+        // User chủ động dừng → không tự khởi động lại lần kết nối sau.
+        K8sPortForwardStore.SetEnabled(_k8s.ConnectedContext, configId, false);
 
         PostMessage("toast", new { message = "Đã dừng port-forward." });
         _ = PushPortForwardsAsync();
@@ -994,6 +1003,57 @@ public sealed class K8sBridgeHost : IAsyncDisposable
         K8sPortForwardStore.Remove(_k8s.ConnectedContext, configId);
         PostMessage("toast", new { message = "Đã xóa port-forward." });
         _ = PushPortForwardsAsync();
+    }
+
+    /// <summary>
+    /// Tự khởi động lại các port-forward đã được bật (AutoStart=true) cho context vừa kết nối —
+    /// để mở lại tool / kết nối lại cluster thì những cái đang chạy trước đó tiếp tục chạy,
+    /// không phải Start tay lại từng cái.
+    /// </summary>
+    private void StartEnabledForwards(int generation)
+    {
+        var context = _k8s.ConnectedContext;
+        if (string.IsNullOrWhiteSpace(context))
+            return;
+
+        var enabled = K8sPortForwardStore.GetForContext(context).Where(c => c.AutoStart).ToList();
+        if (enabled.Count == 0)
+            return;
+
+        var running = new HashSet<string>(
+            K8sPortForwardManager.GetActiveSessions().Select(s => s.ConfigId),
+            StringComparer.OrdinalIgnoreCase);
+
+        var started = 0;
+        foreach (var cfg in enabled)
+        {
+            if (generation != _connectGeneration)
+                return;
+            if (running.Contains(cfg.Id))
+                continue;
+
+            try
+            {
+                K8sPortForwardManager.Start(
+                    cfg.Namespace,
+                    cfg.ResourceKind,
+                    cfg.ResourceName,
+                    cfg.RemotePort,
+                    cfg.LocalPort,
+                    context,
+                    _k8s.ConnectedKubeConfigPath,
+                    cfg.UseHttps,
+                    cfg.OpenInBrowser);
+                started++;
+            }
+            catch
+            {
+                // Lỗi 1 cái (vd. port bận) → bỏ qua, vẫn hiện Disabled để user Start tay.
+            }
+        }
+
+        if (started > 0)
+            PostMessage("toast", new { message = $"Đã tự khởi động lại {started} port-forward đang bật." });
     }
 
     private Task PushPortForwardsAsync()
